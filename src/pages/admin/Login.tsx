@@ -51,7 +51,7 @@ const AdminLogin = () => {
         .maybeSingle();
 
       if (adminError || !adminData) {
-        throw new Error("Cet email n'est pas autorisé comme administrateur");
+        throw new Error("This email is not authorized as administrator");
       }
 
       if (isSignUp) {
@@ -66,8 +66,8 @@ const AdminLogin = () => {
         if (error) throw error;
 
         toast({
-          title: "Compte créé !",
-          description: "Vous pouvez maintenant vous connecter.",
+          title: "Account Created!",
+          description: "You can now sign in.",
         });
         setIsSignUp(false);
       } else {
@@ -79,14 +79,14 @@ const AdminLogin = () => {
         if (error) throw error;
 
         toast({
-          title: "Bienvenue !",
-          description: "Connexion réussie.",
+          title: "Welcome!",
+          description: "Successfully signed in.",
         });
         navigate("/admin");
       }
     } catch (error: any) {
       toast({
-        title: "Erreur",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -102,9 +102,9 @@ const AdminLogin = () => {
           <div className="flex justify-center mb-4">
             <img src={logo} alt="CareEase NY" className="h-16 w-16" />
           </div>
-          <CardTitle className="text-2xl">Portail Admin</CardTitle>
+          <CardTitle className="text-2xl">Admin Portal</CardTitle>
           <CardDescription>
-            {isSignUp ? "Créer votre compte administrateur" : "Connectez-vous pour accéder au tableau de bord"}
+            {isSignUp ? "Create your admin account" : "Sign in to access the dashboard"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -121,7 +121,7 @@ const AdminLogin = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -148,7 +148,7 @@ const AdminLogin = () => {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Chargement..." : isSignUp ? "Créer le compte" : "Se connecter"}
+              {isLoading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
@@ -157,7 +157,7 @@ const AdminLogin = () => {
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-primary hover:underline"
             >
-              {isSignUp ? "Déjà un compte ? Se connecter" : "Pas de compte ? Créer un compte"}
+              {isSignUp ? "Already have an account? Sign in" : "No account? Create account"}
             </button>
           </div>
         </CardContent>

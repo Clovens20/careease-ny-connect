@@ -12,29 +12,29 @@ import personalCareImage from "@/assets/service-personal-care.jpg";
 
 const Index = () => {
   const services = [
-    { icon: Heart, title: "Soins Personnels", description: "Assistance pour les activités quotidiennes : bain, habillage, hygiène", image: personalCareImage },
-    { icon: Users, title: "Compagnie", description: "Soutien amical et interaction sociale contre l'isolement", image: companionImage },
-    { icon: Utensils, title: "Préparation Repas", description: "Planification et préparation de repas nutritifs adaptés", image: null },
-    { icon: Pill, title: "Rappel Médicaments", description: "Administration ponctuelle et suivi de santé", image: null },
-    { icon: Home, title: "Entretien Ménager", description: "Maintien d'un environnement propre et sécuritaire", image: housekeepingImage },
-    { icon: Car, title: "Transport", description: "Transport sécuritaire vers rendez-vous et activités", image: null },
+    { icon: Heart, title: "Personal Care", description: "Assistance with daily living activities including bathing, dressing, and grooming", image: personalCareImage },
+    { icon: Users, title: "Companionship", description: "Friendly support and social interaction to combat loneliness", image: companionImage },
+    { icon: Utensils, title: "Meal Preparation", description: "Nutritious meal planning and preparation tailored to dietary needs", image: null },
+    { icon: Pill, title: "Medication Reminders", description: "Timely medication administration and health monitoring", image: null },
+    { icon: Home, title: "Light Housekeeping", description: "Maintaining a clean, safe, and comfortable living environment", image: housekeepingImage },
+    { icon: Car, title: "Transportation", description: "Safe transportation to appointments and activities", image: null },
   ];
 
   const reasons = [
     {
       icon: Shield,
-      title: "Licencié & Assuré",
-      description: "Tous nos soignants sont pleinement licenciés, assurés et vérifiés pour votre tranquillité d'esprit.",
+      title: "Licensed & Insured",
+      description: "All our caregivers are fully licensed, insured, and background-checked for your peace of mind.",
     },
     {
       icon: Clock,
-      title: "Disponibilité 24/7",
-      description: "Horaires flexibles avec tarifs horaires ou journaliers adaptés à vos besoins et votre budget.",
+      title: "24/7 Availability",
+      description: "Flexible scheduling with hourly or daily rates to fit your unique needs and budget.",
     },
     {
       icon: Award,
-      title: "Équipe Expérimentée",
-      description: "Des années d'expertise pour fournir des soins compassionnels et professionnels aux familles de New York.",
+      title: "Experienced Team",
+      description: "Years of expertise providing compassionate, professional care to families across New York.",
     },
   ];
 
@@ -86,17 +86,17 @@ const Index = () => {
                   {/* Left side: Text and CTA */}
                   <div className="text-white py-16">
                     <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                      Votre bien-être, notre priorité au quotidien
+                      Your well-being, our daily priority
                     </h1>
                     <p className="text-lg md:text-xl mb-8 text-white/90 leading-relaxed">
-                      Soins compassionnels et fiables pour vous ou vos proches. Disponible 24/7 pour vous aider à maintenir votre indépendance et qualité de vie à domicile.
+                      Compassionate and reliable care for you or your loved ones. Available 24/7 to help you maintain independence and quality of life at home.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 mb-12">
                       <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-xl">
-                        <Link to="/booking">Réserver Maintenant</Link>
+                        <Link to="/booking">Book Now</Link>
                       </Button>
                       <Button size="lg" variant="outline" asChild className="border-2 border-white text-white hover:bg-white/10 backdrop-blur-sm">
-                        <Link to="/services">Nos Services</Link>
+                        <Link to="/services">Our Services</Link>
                       </Button>
                     </div>
                     
@@ -129,9 +129,9 @@ const Index = () => {
         <section className="py-16 md:py-24 bg-gradient-to-b from-background to-secondary/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">Nos Services</h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Our Services</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Services complets d'aide à domicile adaptés à vos besoins
+                Comprehensive home health aide services tailored to your needs
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -166,7 +166,7 @@ const Index = () => {
             </div>
             <div className="text-center mt-12">
               <Button size="lg" asChild className="shadow-lg">
-                <Link to="/services">Voir Tous Les Services</Link>
+                <Link to="/services">View All Services</Link>
               </Button>
             </div>
           </div>
@@ -176,9 +176,9 @@ const Index = () => {
         <section className="py-16 md:py-24 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">Pourquoi Nous Choisir</h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Why Choose Us</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Découvrez la différence de soins vraiment personnalisés
+                Experience the difference of truly personalized care
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -201,9 +201,9 @@ const Index = () => {
         <section className="py-16 md:py-24 bg-gradient-to-b from-secondary/20 to-background">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">Ce Que Disent Nos Clients</h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">What Our Clients Say</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Témoignages réels de familles que nous avons aidées
+                Real stories from families we've helped
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -232,13 +232,13 @@ const Index = () => {
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
-                Prêt à Commencer?
+                Ready to Get Started?
               </h2>
               <p className="text-xl text-white/90 mb-10 leading-relaxed">
-                Réservez un service aujourd'hui et découvrez les soins que votre famille mérite
+                Book a service today and experience the care your family deserves
               </p>
               <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-2xl text-lg px-8 py-6 h-auto">
-                <Link to="/booking">Réserver Maintenant</Link>
+                <Link to="/booking">Book Now</Link>
               </Button>
             </div>
           </div>
