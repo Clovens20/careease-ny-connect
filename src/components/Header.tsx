@@ -1,37 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import logo from "@/assets/logo.png";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user?.email) {
-        const { data } = await supabase
-          .from("admins")
-          .select("*")
-          .eq("email", session.user.email)
-          .single();
-        
-        setIsAdmin(!!data);
-      }
-    };
-
-    checkAdminStatus();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAdminStatus();
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const navLinks = [
     { to: "/", label: "Home" },
@@ -68,11 +42,6 @@ export const Header = () => {
             <Button asChild variant="default" size="sm">
               <Link to="/booking">Book Now</Link>
             </Button>
-            {isAdmin && (
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/admin">Admin</Link>
-              </Button>
-            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -104,13 +73,6 @@ export const Header = () => {
                   Book Now
                 </Link>
               </Button>
-              {isAdmin && (
-                <Button asChild variant="ghost" size="sm" className="w-full">
-                  <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
-                    Admin
-                  </Link>
-                </Button>
-              )}
             </div>
           </nav>
         )}

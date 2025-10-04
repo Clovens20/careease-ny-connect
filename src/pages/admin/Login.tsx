@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,56 +12,58 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data: adminData } = await supabase
+          .from("admins")
+          .select("*")
+          .eq("email", user.email)
+          .maybeSingle();
+        
+        if (adminData) {
+          navigate("/admin");
+        }
+      }
+    };
+    checkExistingSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/admin`,
-          },
-        });
-        if (error) throw error;
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
-        });
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
 
-        // Check if user is admin
-        const { data: adminData, error: adminError } = await supabase
-          .from("admins")
-          .select("*")
-          .eq("email", email)
-          .single();
+      // Check if user is admin
+      const { data: adminData, error: adminError } = await supabase
+        .from("admins")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
 
-        if (adminError || !adminData) {
-          await supabase.auth.signOut();
-          throw new Error("Unauthorized: Not an admin account");
-        }
-
-        toast({
-          title: "Welcome back!",
-          description: "Successfully logged in.",
-        });
-        navigate("/admin");
+      if (adminError || !adminData) {
+        await supabase.auth.signOut();
+        throw new Error("Accès non autorisé : compte administrateur requis");
       }
+
+      toast({
+        title: "Bienvenue !",
+        description: "Connexion réussie.",
+      });
+      navigate("/admin");
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Erreur",
         description: error.message,
         variant: "destructive",
       });
@@ -77,9 +79,9 @@ const AdminLogin = () => {
           <div className="flex justify-center mb-4">
             <img src={logo} alt="CareEase NY" className="h-16 w-16" />
           </div>
-          <CardTitle className="text-2xl">Admin Portal</CardTitle>
+          <CardTitle className="text-2xl">Portail Admin</CardTitle>
           <CardDescription>
-            {isSignUp ? "Create an admin account" : "Sign in to access the dashboard"}
+            Connectez-vous pour accéder au tableau de bord
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -107,17 +109,9 @@ const AdminLogin = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
+              {isLoading ? "Connexion..." : "Se connecter"}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary hover:underline"
-            >
-              {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
