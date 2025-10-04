@@ -25,7 +25,7 @@ const AdminLogin = () => {
         const { data: adminData } = await supabase
           .from("admins")
           .select("*")
-          .eq("email", user.email)
+          .eq("email", user.email.toLowerCase())
           .maybeSingle();
         
         if (adminData) {
@@ -41,10 +41,23 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Vérifier d'abord si l'email est autorisé comme admin
+      const { data: adminData, error: adminError } = await supabase
+        .from("admins")
+        .select("email")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (adminError || !adminData) {
+        throw new Error("Cet email n'est pas autorisé comme administrateur");
+      }
+
       if (isSignUp) {
-        // Sign up flow
+        // Flux d'inscription
         const { error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/admin`,
@@ -52,42 +65,18 @@ const AdminLogin = () => {
         });
         if (error) throw error;
 
-        // Check if user email is in admins table
-        const { data: adminData } = await supabase
-          .from("admins")
-          .select("*")
-          .eq("email", email)
-          .maybeSingle();
-
-        if (!adminData) {
-          await supabase.auth.signOut();
-          throw new Error("Cet email n'est pas autorisé comme administrateur");
-        }
-
         toast({
           title: "Compte créé !",
           description: "Vous pouvez maintenant vous connecter.",
         });
         setIsSignUp(false);
       } else {
-        // Sign in flow
+        // Flux de connexion
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (error) throw error;
-
-        // Check if user is admin
-        const { data: adminData, error: adminError } = await supabase
-          .from("admins")
-          .select("*")
-          .eq("email", email)
-          .maybeSingle();
-
-        if (adminError || !adminData) {
-          await supabase.auth.signOut();
-          throw new Error("Accès non autorisé : compte administrateur requis");
-        }
 
         toast({
           title: "Bienvenue !",
