@@ -36,11 +36,16 @@ const Booking = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("*")
-        .eq("is_active", true)
+        .select("id, name, description, price_hourly, price_daily")
         .order("name");
       if (error) throw error;
-      return data;
+      return data as Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        price_hourly: number | null;
+        price_daily: number | null;
+      }>;
     },
   });
 
