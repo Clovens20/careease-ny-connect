@@ -4,32 +4,37 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Heart, Users, Utensils, Pill, Home, Car, Shield, Clock, Award, Star } from "lucide-react";
+import heroImage from "@/assets/hero-careease.jpg";
+import companionImage from "@/assets/service-companion.jpg";
+import housekeepingImage from "@/assets/service-housekeeping.jpg";
+import activitiesImage from "@/assets/service-activities.jpg";
+import personalCareImage from "@/assets/service-personal-care.jpg";
 
 const Index = () => {
   const services = [
-    { icon: Heart, title: "Personal Care", description: "Assistance with daily living activities including bathing, dressing, and grooming" },
-    { icon: Users, title: "Companionship", description: "Friendly support and social interaction to combat loneliness" },
-    { icon: Utensils, title: "Meal Preparation", description: "Nutritious meal planning and preparation tailored to dietary needs" },
-    { icon: Pill, title: "Medication Reminders", description: "Timely medication administration and health monitoring" },
-    { icon: Home, title: "Light Housekeeping", description: "Maintaining a clean, safe, and comfortable living environment" },
-    { icon: Car, title: "Transportation", description: "Safe transportation to appointments and activities" },
+    { icon: Heart, title: "Soins Personnels", description: "Assistance pour les activités quotidiennes : bain, habillage, hygiène", image: personalCareImage },
+    { icon: Users, title: "Compagnie", description: "Soutien amical et interaction sociale contre l'isolement", image: companionImage },
+    { icon: Utensils, title: "Préparation Repas", description: "Planification et préparation de repas nutritifs adaptés", image: null },
+    { icon: Pill, title: "Rappel Médicaments", description: "Administration ponctuelle et suivi de santé", image: null },
+    { icon: Home, title: "Entretien Ménager", description: "Maintien d'un environnement propre et sécuritaire", image: housekeepingImage },
+    { icon: Car, title: "Transport", description: "Transport sécuritaire vers rendez-vous et activités", image: null },
   ];
 
   const reasons = [
     {
       icon: Shield,
-      title: "Licensed & Insured",
-      description: "All our caregivers are fully licensed, insured, and background-checked for your peace of mind.",
+      title: "Licencié & Assuré",
+      description: "Tous nos soignants sont pleinement licenciés, assurés et vérifiés pour votre tranquillité d'esprit.",
     },
     {
       icon: Clock,
-      title: "24/7 Availability",
-      description: "Flexible scheduling with hourly or daily rates to fit your unique needs and budget.",
+      title: "Disponibilité 24/7",
+      description: "Horaires flexibles avec tarifs horaires ou journaliers adaptés à vos besoins et votre budget.",
     },
     {
       icon: Award,
-      title: "Experienced Team",
-      description: "Years of expertise providing compassionate, professional care to families across New York.",
+      title: "Équipe Expérimentée",
+      description: "Des années d'expertise pour fournir des soins compassionnels et professionnels aux familles de New York.",
     },
   ];
 
@@ -62,59 +67,56 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        {/* Hero Section with Purple Gradient */}
-        <section className="relative bg-gradient-to-br from-primary via-primary-dark to-primary-light py-20 md:py-32 overflow-hidden">
-          {/* Decorative background pattern */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] opacity-20"></div>
-          
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                {/* Left side: Text and Stats */}
-                <div className="text-white">
-                  <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                    Professional Home Health Aide Services
-                  </h1>
-                  <p className="text-lg md:text-xl mb-8 text-white/90">
-                    Compassionate, reliable care for you or your loved ones. Available 24/7 to help you maintain independence and quality of life at home.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                    <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90">
-                      <Link to="/booking">Book a Service</Link>
-                    </Button>
-                    <Button size="lg" variant="outline" asChild className="border-white text-white hover:bg-white/10">
-                      <Link to="/services">View Services</Link>
-                    </Button>
-                  </div>
-                  
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {stats.map((stat, index) => (
-                      <Card key={index} className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                              <stat.icon className="h-5 w-5 text-white" />
+        {/* Hero Section with Image Background */}
+        <section className="relative py-0 overflow-hidden">
+          {/* Hero Image with Overlay */}
+          <div className="relative h-[600px] md:h-[700px]">
+            <div className="absolute inset-0">
+              <img 
+                src={heroImage} 
+                alt="CareEase NY - Professional Home Health Care" 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-transparent"></div>
+            </div>
+            
+            <div className="container mx-auto px-4 relative z-10 h-full">
+              <div className="max-w-6xl mx-auto h-full">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full">
+                  {/* Left side: Text and CTA */}
+                  <div className="text-white py-16">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+                      Votre bien-être, notre priorité au quotidien
+                    </h1>
+                    <p className="text-lg md:text-xl mb-8 text-white/90 leading-relaxed">
+                      Soins compassionnels et fiables pour vous ou vos proches. Disponible 24/7 pour vous aider à maintenir votre indépendance et qualité de vie à domicile.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 mb-12">
+                      <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-xl">
+                        <Link to="/booking">Réserver Maintenant</Link>
+                      </Button>
+                      <Button size="lg" variant="outline" asChild className="border-2 border-white text-white hover:bg-white/10 backdrop-blur-sm">
+                        <Link to="/services">Nos Services</Link>
+                      </Button>
+                    </div>
+                    
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {stats.map((stat, index) => (
+                        <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all shadow-xl">
+                          <CardContent className="p-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                                <stat.icon className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <div className="text-2xl font-bold text-white">{stat.value}</div>
+                                <div className="text-xs text-white/80">{stat.label}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-2xl font-bold text-white">{stat.value}</div>
-                              <div className="text-xs text-white/80">{stat.label}</div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Right side: Visual space */}
-                <div className="hidden lg:block">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent rounded-3xl"></div>
-                    <div className="h-[500px] rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 flex items-center justify-center">
-                      <div className="text-center text-white/40">
-                        <Heart className="h-32 w-32 mx-auto mb-4 opacity-20" />
-                      </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -124,62 +126,70 @@ const Index = () => {
         </section>
 
         {/* Services Section */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-gradient-to-b from-background to-secondary/20">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">What We Offer</h2>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Nos Services</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Comprehensive home health aide services tailored to your needs
+                Services complets d'aide à domicile adaptés à vos besoins
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.map((service, index) => {
-                const isPurple = index % 2 === 0;
-                return (
-                  <Card 
-                    key={index} 
-                    className={`hover:shadow-xl hover:scale-105 transition-all ${
-                      isPurple ? 'bg-primary text-white border-primary' : 'bg-white'
-                    }`}
-                  >
-                    <CardContent className="pt-8 pb-6">
-                      <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-6 ${
-                        isPurple ? 'bg-white/20' : 'bg-primary/10'
-                      }`}>
-                        <service.icon className={`h-8 w-8 ${isPurple ? 'text-white' : 'text-primary'}`} />
-                      </div>
-                      <h3 className={`font-semibold text-xl mb-3 ${isPurple ? 'text-white' : 'text-foreground'}`}>
-                        {service.title}
-                      </h3>
-                      <p className={`text-sm ${isPurple ? 'text-white/80' : 'text-muted-foreground'}`}>
-                        {service.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {services.map((service, index) => (
+                <Card 
+                  key={index} 
+                  className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 shadow-lg"
+                >
+                  {service.image && (
+                    <div className="relative h-48 overflow-hidden">
+                      <img 
+                        src={service.image} 
+                        alt={service.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    </div>
+                  )}
+                  <CardContent className="pt-6 pb-6">
+                    <div className="h-14 w-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
+                      <service.icon className="h-7 w-7 text-primary group-hover:text-white transition-colors" />
+                    </div>
+                    <h3 className="font-semibold text-xl mb-3 text-foreground">
+                      {service.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {service.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="text-center mt-12">
+              <Button size="lg" asChild className="shadow-lg">
+                <Link to="/services">Voir Tous Les Services</Link>
+              </Button>
             </div>
           </div>
         </section>
 
         {/* Why Choose Us */}
-        <section className="py-16 md:py-24 bg-gradient-to-b from-background to-secondary/30">
+        <section className="py-16 md:py-24 bg-white">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Us</h2>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Pourquoi Nous Choisir</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Experience the difference of truly personalized care
+                Découvrez la différence de soins vraiment personnalisés
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {reasons.map((reason, index) => (
-                <Card key={index} className="hover:shadow-2xl hover:scale-105 transition-all border-0 shadow-lg">
-                  <CardContent className="pt-8 pb-6">
-                    <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                      <reason.icon className="h-8 w-8 text-white" />
+                <Card key={index} className="group hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-white to-primary/5">
+                  <CardContent className="pt-8 pb-8 text-center">
+                    <div className="h-20 w-20 bg-primary rounded-full flex items-center justify-center mb-6 shadow-lg mx-auto group-hover:scale-110 transition-transform duration-300">
+                      <reason.icon className="h-10 w-10 text-white" />
                     </div>
-                    <h3 className="font-semibold text-xl mb-3">{reason.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{reason.description}</p>
+                    <h3 className="font-bold text-2xl mb-4">{reason.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{reason.description}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -188,27 +198,27 @@ const Index = () => {
         </section>
 
         {/* Testimonials */}
-        <section className="py-16 md:py-24 bg-background">
+        <section className="py-16 md:py-24 bg-gradient-to-b from-secondary/20 to-background">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Ce Que Disent Nos Clients</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Real stories from families we've helped
+                Témoignages réels de familles que nous avons aidées
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {testimonials.map((testimonial, index) => (
-                <Card key={index} className="hover:shadow-xl transition-all border-primary/20">
-                  <CardContent className="pt-8 pb-6">
-                    <div className="flex mb-6">
+                <Card key={index} className="hover:shadow-2xl transition-all duration-300 border-primary/20 bg-white">
+                  <CardContent className="pt-8 pb-8">
+                    <div className="flex justify-center mb-6">
                       {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="h-5 w-5 text-primary fill-primary" />
+                        <Star key={i} className="h-6 w-6 text-primary fill-primary" />
                       ))}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-6 italic leading-relaxed">
+                    <p className="text-muted-foreground mb-6 italic leading-relaxed text-center">
                       "{testimonial.text}"
                     </p>
-                    <p className="font-semibold text-lg">{testimonial.author}</p>
+                    <p className="font-bold text-lg text-center text-primary">{testimonial.author}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -221,14 +231,14 @@ const Index = () => {
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] opacity-20"></div>
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-                Ready to Get Started?
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
+                Prêt à Commencer?
               </h2>
-              <p className="text-lg text-white/90 mb-8">
-                Book a service today and experience the care your family deserves
+              <p className="text-xl text-white/90 mb-10 leading-relaxed">
+                Réservez un service aujourd'hui et découvrez les soins que votre famille mérite
               </p>
-              <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90">
-                <Link to="/booking">Book Now</Link>
+              <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-2xl text-lg px-8 py-6 h-auto">
+                <Link to="/booking">Réserver Maintenant</Link>
               </Button>
             </div>
           </div>

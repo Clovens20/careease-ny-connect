@@ -148,6 +148,38 @@ export type Database = {
         }
         Relationships: []
       }
+      unavailable_dates: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          is_booked: boolean | null
+          service_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          is_booked?: boolean | null
+          service_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          is_booked?: boolean | null
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unavailable_dates_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
