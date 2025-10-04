@@ -34,13 +34,13 @@ const Services = () => {
       <Header />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-gradient-to-b from-primary/10 to-background py-16">
+        <section className="bg-gradient-to-br from-primary to-primary-dark py-20 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 Our Services
               </h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-white/90">
                 Comprehensive home health aide services tailored to your needs. We provide professional, compassionate care to help you maintain independence and quality of life.
               </p>
             </div>
@@ -67,25 +67,25 @@ const Services = () => {
                 {services?.map((service) => {
                   const Icon = iconMap[service.name] || Heart;
                   return (
-                    <Card key={service.id} className="hover:shadow-lg transition-shadow">
+                    <Card key={service.id} className="hover:shadow-xl hover:scale-105 transition-all">
                       <CardHeader>
-                        <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                          <Icon className="h-6 w-6 text-primary" />
+                        <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                          <Icon className="h-8 w-8 text-white" />
                         </div>
-                        <CardTitle>{service.name}</CardTitle>
-                        <CardDescription>{service.description}</CardDescription>
+                        <CardTitle className="text-xl">{service.name}</CardTitle>
+                        <CardDescription className="text-base">{service.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Hourly Rate:</span>
-                            <span className="font-semibold text-primary">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
+                            <span className="text-sm font-medium">Hourly Rate:</span>
+                            <span className="font-bold text-primary text-lg">
                               ${service.price_hourly}/hr
                             </span>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Daily Rate:</span>
-                            <span className="font-semibold text-primary">
+                          <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
+                            <span className="text-sm font-medium">Daily Rate:</span>
+                            <span className="font-bold text-primary text-lg">
                               ${service.price_daily}/day
                             </span>
                           </div>

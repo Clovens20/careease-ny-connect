@@ -32,11 +32,11 @@ const About = () => {
       <Header />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-gradient-to-b from-primary/10 to-background py-16">
+        <section className="bg-gradient-to-br from-primary to-primary-dark py-20 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">About CareEase NY</h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-white/90">
                 Dedicated to providing exceptional home health aide services across New York
               </p>
             </div>
@@ -65,10 +65,10 @@ const About = () => {
             <h2 className="text-3xl font-bold mb-12 text-center">Our Values</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {values.map((value, index) => (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6">
-                    <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <value.icon className="h-8 w-8 text-primary" />
+                <Card key={index} className="text-center hover:shadow-xl hover:scale-105 transition-all">
+                  <CardContent className="pt-8 pb-6">
+                    <div className="h-16 w-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <value.icon className="h-8 w-8 text-white" />
                     </div>
                     <h3 className="font-semibold text-lg mb-2">{value.title}</h3>
                     <p className="text-sm text-muted-foreground">{value.description}</p>

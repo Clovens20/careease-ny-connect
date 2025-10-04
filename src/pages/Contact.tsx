@@ -47,11 +47,11 @@ const Contact = () => {
       <Header />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="bg-gradient-to-b from-primary/10 to-background py-16">
+        <section className="bg-gradient-to-br from-primary to-primary-dark py-20 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">Contact Us</h1>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-white/90">
                 Get in touch with us. We're here to answer your questions and help you get started.
               </p>
             </div>
@@ -68,15 +68,17 @@ const Contact = () => {
                   Have questions about our services? Want to schedule a consultation? We're here to help. Reach out to us using any of the methods below.
                 </p>
 
-                <Card>
+                <Card className="hover:shadow-xl transition-all">
                   <CardHeader>
                     <CardTitle>Contact Information</CardTitle>
                     <CardDescription>We're available to assist you</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {settings?.phone_admin && (
-                      <div className="flex items-start space-x-3">
-                        <Phone className="h-5 w-5 text-primary mt-0.5" />
+                      <div className="flex items-start space-x-3 p-3 bg-secondary rounded-lg">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Phone className="h-5 w-5 text-white" />
+                        </div>
                         <div>
                           <p className="font-medium">Phone</p>
                           <p className="text-muted-foreground">{settings.phone_admin}</p>
@@ -84,8 +86,10 @@ const Contact = () => {
                       </div>
                     )}
                     {settings?.email_admin && (
-                      <div className="flex items-start space-x-3">
-                        <Mail className="h-5 w-5 text-primary mt-0.5" />
+                      <div className="flex items-start space-x-3 p-3 bg-secondary rounded-lg">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Mail className="h-5 w-5 text-white" />
+                        </div>
                         <div>
                           <p className="font-medium">Email</p>
                           <p className="text-muted-foreground">{settings.email_admin}</p>
@@ -93,8 +97,10 @@ const Contact = () => {
                       </div>
                     )}
                     {settings?.address && (
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                      <div className="flex items-start space-x-3 p-3 bg-secondary rounded-lg">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                          <MapPin className="h-5 w-5 text-white" />
+                        </div>
                         <div>
                           <p className="font-medium">Address</p>
                           <p className="text-muted-foreground">{settings.address}</p>
