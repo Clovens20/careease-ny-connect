@@ -18,41 +18,41 @@ export const Footer = () => {
   });
 
   return (
-    <footer className="bg-gradient-to-br from-primary via-primary-dark to-primary-light text-white mt-20">
+    <footer className="bg-white mt-20">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Description */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
               <img src={logo} alt="CareEase NY" className="h-10 w-10" />
-              <span className="text-xl font-bold text-white">CareEase NY</span>
+              <span className="text-xl font-bold text-accent">CareEase NY</span>
             </div>
-            <p className="text-white/80 text-sm mb-4">
+            <p className="text-accent/70 text-sm mb-4">
               Professional home health aide services in New York. Providing quality care and support to help you or your loved ones live comfortably at home.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4 text-white">Quick Links</h3>
+            <h3 className="font-semibold mb-4 text-accent">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/services" className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link to="/services" className="text-sm text-accent/70 hover:text-accent transition-colors">
                   Our Services
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link to="/about" className="text-sm text-accent/70 hover:text-accent transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link to="/contact" className="text-sm text-accent/70 hover:text-accent transition-colors">
                   Contact
                 </Link>
               </li>
               <li>
-                <Link to="/booking" className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link to="/booking" className="text-sm text-accent/70 hover:text-accent transition-colors">
                   Book Service
                 </Link>
               </li>
@@ -61,22 +61,22 @@ export const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="font-semibold mb-4 text-white">Contact Us</h3>
+            <h3 className="font-semibold mb-4 text-accent">Contact Us</h3>
             <ul className="space-y-3">
               {settings?.phone_admin && (
-                <li className="flex items-start space-x-2 text-sm text-white/70">
+                <li className="flex items-start space-x-2 text-sm text-accent/70">
                   <Phone size={16} className="mt-0.5 flex-shrink-0" />
                   <span>{settings.phone_admin}</span>
                 </li>
               )}
               {settings?.email_admin && (
-                <li className="flex items-start space-x-2 text-sm text-white/70">
+                <li className="flex items-start space-x-2 text-sm text-accent/70">
                   <Mail size={16} className="mt-0.5 flex-shrink-0" />
                   <span>{settings.email_admin}</span>
                 </li>
               )}
               {settings?.address && (
-                <li className="flex items-start space-x-2 text-sm text-white/70">
+                <li className="flex items-start space-x-2 text-sm text-accent/70">
                   <MapPin size={16} className="mt-0.5 flex-shrink-0" />
                   <span>{settings.address}</span>
                 </li>
@@ -89,7 +89,7 @@ export const Footer = () => {
                   href={settings.facebook_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="text-accent/70 hover:text-accent transition-colors"
                 >
                   <Facebook size={20} />
                 </a>
@@ -99,7 +99,7 @@ export const Footer = () => {
                   href={settings.instagram_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/70 hover:text-white transition-colors"
+                  className="text-accent/70 hover:text-accent transition-colors"
                 >
                   <Instagram size={20} />
                 </a>
@@ -109,7 +109,7 @@ export const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/70">
+        <div className="border-t border-accent/20 mt-8 pt-8 text-center text-sm text-accent/70">
           <p>{settings?.footer_text || "© 2025 CareEase NY. All rights reserved."}</p>
         </div>
       </div>
