@@ -60,7 +60,7 @@ const AdminLogin = () => {
           email: normalizedEmail,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/admin`,
+            emailRedirectTo: `${window.location.origin}/`,
           },
         });
         if (error) throw error;
