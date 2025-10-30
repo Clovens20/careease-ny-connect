@@ -35,9 +35,9 @@ const About = () => {
         <section className="bg-gradient-to-br from-primary to-primary-dark py-20 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">About CareEase NY</h1>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">About CareEase USA</h1>
               <p className="text-lg text-white/90">
-                Dedicated to providing exceptional home health aide services across New York
+                Dedicated to providing exceptional home health aide services for elderly and disabled individuals across the USA
               </p>
             </div>
           </div>
@@ -51,7 +51,7 @@ const About = () => {
               <Card>
                 <CardContent className="pt-6">
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    At CareEase NY, our mission is to enhance the quality of life for individuals who need assistance with daily activities. We believe that everyone deserves to live with dignity and independence in the comfort of their own home. Our team of professional home health aides is committed to providing personalized, compassionate care that meets the unique needs of each client.
+                    At CareEase USA, our mission is to enhance the quality of life for elderly and disabled individuals who need assistance with daily activities. We believe that everyone deserves to live with dignity and independence in the comfort of their own home. Our team of professional home health aides is committed to providing personalized, compassionate care that meets the unique needs of each client.
                   </p>
                 </CardContent>
               </Card>
@@ -87,10 +87,10 @@ const About = () => {
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <p className="text-muted-foreground leading-relaxed">
-                    Founded in New York, CareEase NY was born from a simple yet powerful vision: to provide families with reliable, professional home health aide services they can trust. Our founders recognized the growing need for quality in-home care and set out to create a service that would truly make a difference in people's lives.
+                    Founded with a mission to serve elderly and disabled individuals, CareEase USA was born from a simple yet powerful vision: to provide families with reliable, professional home health aide services they can trust. Our founders recognized the growing need for quality in-home care and set out to create a service that would truly make a difference in people's lives.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
-                    Today, we serve hundreds of families across New York, providing everything from personal care to companionship, meal preparation, and medication reminders. Our team of dedicated caregivers undergoes rigorous training and background checks to ensure we deliver the highest standard of care.
+                    Today, we serve hundreds of families across the USA, providing specialized home health aide and housekeeping services adapted to the unique needs of elderly and disabled individuals. Our team of dedicated caregivers undergoes rigorous training and background checks to ensure we deliver the highest standard of care.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
                     We understand that choosing a home health aide is a deeply personal decision. That's why we work closely with each family to understand their unique needs and preferences, creating customized care plans that promote independence, dignity, and quality of life.

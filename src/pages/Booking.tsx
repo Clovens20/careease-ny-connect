@@ -12,23 +12,33 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarIcon, CheckCircle2 } from "lucide-react";
+import { CalendarIcon, CheckCircle2, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 const Booking = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
+  
+  // Service & Date Selection
   const [selectedService, setSelectedService] = useState(searchParams.get("service") || "");
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [duration, setDuration] = useState("4");
-  const [startTime, setStartTime] = useState("09:00");
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [dateRangeStart, setDateRangeStart] = useState<Date>();
+  const [dateRangeEnd, setDateRangeEnd] = useState<Date>();
+  const [isRangeMode, setIsRangeMode] = useState(false);
+  const [hoursPerDay, setHoursPerDay] = useState("4");
+  
+  // Client Information
   const [clientName, setClientName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientType, setRecipientType] = useState("");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: services, isLoading } = useQuery({
@@ -36,7 +46,8 @@ const Booking = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, description, price_hourly, price_daily")
+        .select("id, name, description, price_hourly, price_daily, is_active")
+        .eq("is_active", true)
         .order("name");
       if (error) throw error;
       return data as Array<{
@@ -45,23 +56,70 @@ const Booking = () => {
         description: string | null;
         price_hourly: number | null;
         price_daily: number | null;
+        is_active: boolean | null;
       }>;
     },
   });
 
   const selectedServiceData = services?.find((s) => s.id === selectedService);
 
-  const calculatePrice = () => {
+  const calculateTotalPrice = () => {
     if (!selectedServiceData) return 0;
-    const hours = parseInt(duration);
-    if (hours >= 8) {
-      return selectedServiceData.price_daily || 0;
+    const hours = parseInt(hoursPerDay);
+    const pricePerDay = (selectedServiceData.price_hourly || 0) * hours;
+    
+    if (isRangeMode && dateRangeStart && dateRangeEnd) {
+      const days = Math.ceil((dateRangeEnd.getTime() - dateRangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return pricePerDay * days;
     }
-    return (selectedServiceData.price_hourly || 0) * hours;
+    
+    return pricePerDay * selectedDates.length;
+  };
+
+  const getDaysCount = () => {
+    if (isRangeMode && dateRangeStart && dateRangeEnd) {
+      return Math.ceil((dateRangeEnd.getTime() - dateRangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+    return selectedDates.length;
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    if (isRangeMode) {
+      if (!dateRangeStart) {
+        setDateRangeStart(date);
+      } else if (!dateRangeEnd) {
+        if (date > dateRangeStart) {
+          setDateRangeEnd(date);
+        } else {
+          setDateRangeStart(date);
+          setDateRangeEnd(undefined);
+        }
+      } else {
+        setDateRangeStart(date);
+        setDateRangeEnd(undefined);
+      }
+    } else {
+      const dateString = date.toDateString();
+      const exists = selectedDates.some(d => d.toDateString() === dateString);
+      if (exists) {
+        setSelectedDates(selectedDates.filter(d => d.toDateString() !== dateString));
+      } else {
+        setSelectedDates([...selectedDates, date].sort((a, b) => a.getTime() - b.getTime()));
+      }
+    }
   };
 
   const handleSubmit = async () => {
-    if (!selectedDate || !selectedService) return;
+    if (selectedDates.length === 0 && (!dateRangeStart || !dateRangeEnd)) {
+      toast({
+        title: "Dates Required",
+        description: "Please select at least one date or a date range.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -72,30 +130,40 @@ const Booking = () => {
         email: email,
         phone: phone,
         address: address,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        start_time: startTime,
-        duration_hours: parseInt(duration),
-        total_price: calculatePrice(),
-        status: "pending",
-      });
+        date: isRangeMode ? (dateRangeStart ? format(dateRangeStart, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")) : (selectedDates[0] ? format(selectedDates[0], "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")),
+        start_time: "09:00",
+        duration_hours: parseInt(hoursPerDay),
+        recipient_name: recipientName,
+        recipient_type: recipientType as "elderly" | "disabled" | "both",
+        date_range_start: isRangeMode ? (dateRangeStart ? format(dateRangeStart, "yyyy-MM-dd") : null) : (selectedDates[0] ? format(selectedDates[0], "yyyy-MM-dd") : null),
+        date_range_end: isRangeMode ? (dateRangeEnd ? format(dateRangeEnd, "yyyy-MM-dd") : null) : null,
+        selected_dates: isRangeMode ? null : selectedDates.map(d => format(d, "yyyy-MM-dd")),
+        hours_per_day: parseInt(hoursPerDay),
+        total_price: calculateTotalPrice(),
+        status: "pending" as "pending",
+      } as any);
 
       if (error) throw error;
 
       toast({
-        title: "Booking Confirmed!",
-        description: "We've received your booking request. We'll contact you shortly to confirm.",
+        title: "Booking Request Sent!",
+        description: "We've received your booking request. We'll contact you shortly with confirmation and agent assignment.",
       });
 
       // Reset form
       setStep(1);
       setSelectedService("");
-      setSelectedDate(undefined);
-      setDuration("4");
-      setStartTime("09:00");
+      setSelectedDates([]);
+      setDateRangeStart(undefined);
+      setDateRangeEnd(undefined);
+      setIsRangeMode(false);
+      setHoursPerDay("4");
       setClientName("");
       setEmail("");
       setPhone("");
       setAddress("");
+      setRecipientName("");
+      setRecipientType("");
     } catch (error) {
       toast({
         title: "Error",
@@ -116,15 +184,15 @@ const Booking = () => {
       });
       return;
     }
-    if (step === 2 && !selectedDate) {
+    if (step === 2 && selectedDates.length === 0 && (!dateRangeStart || !dateRangeEnd)) {
       toast({
-        title: "Date Required",
-        description: "Please select a date to continue.",
+        title: "Dates Required",
+        description: "Please select at least one date or a date range.",
         variant: "destructive",
       });
       return;
     }
-    if (step === 3 && (!clientName || !email || !phone || !address)) {
+    if (step === 3 && (!clientName || !email || !phone || !address || !recipientName || !recipientType)) {
       toast({
         title: "Information Required",
         description: "Please fill in all fields to continue.",
@@ -145,7 +213,7 @@ const Booking = () => {
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Book a Service</h1>
             <p className="text-lg text-muted-foreground">
-              Complete the form below to schedule your home health aide service
+              Complete the form below to schedule your care service
             </p>
           </div>
 
@@ -179,7 +247,7 @@ const Booking = () => {
             <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent pb-8">
               <CardTitle className="text-2xl">
                 {step === 1 && "Select a Service"}
-                {step === 2 && "Choose Date & Time"}
+                {step === 2 && "Choose Dates & Hours"}
                 {step === 3 && "Your Information"}
                 {step === 4 && "Confirm Booking"}
               </CardTitle>
@@ -194,7 +262,7 @@ const Booking = () => {
                   <Label className="text-lg font-semibold">Select a Service</Label>
                   {isLoading ? (
                     <div className="space-y-3">
-                      {[...Array(3)].map((_, i) => (
+                      {[...Array(2)].map((_, i) => (
                         <div key={i} className="h-24 bg-secondary animate-pulse rounded-lg" />
                       ))}
                     </div>
@@ -218,7 +286,6 @@ const Booking = () => {
                             </div>
                             <div className="text-right ml-4">
                               <p className="font-bold text-xl text-primary">${service.price_hourly}/hr</p>
-                              <p className="text-sm text-muted-foreground">${service.price_daily}/day</p>
                             </div>
                           </div>
                         </div>
@@ -228,45 +295,63 @@ const Booking = () => {
                 </div>
               )}
 
-              {/* Step 2: Date & Time */}
+              {/* Step 2: Date & Hours Selection */}
               {step === 2 && (
                 <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label className="text-base font-semibold">Duration (hours)</Label>
-                    <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((h) => (
-                          <SelectItem key={h} value={h.toString()}>
-                            {h} hour{h > 1 ? "s" : ""} - ${(parseInt(h.toString()) >= 8 ? selectedServiceData?.price_daily : (selectedServiceData?.price_hourly || 0) * parseInt(h.toString())).toFixed(2)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex gap-4 mb-4">
+                    <Button
+                      variant={!isRangeMode ? "default" : "outline"}
+                      onClick={() => {
+                        setIsRangeMode(false);
+                        setDateRangeStart(undefined);
+                        setDateRangeEnd(undefined);
+                      }}
+                      className="flex-1"
+                    >
+                      Multiple Days
+                    </Button>
+                    <Button
+                      variant={isRangeMode ? "default" : "outline"}
+                      onClick={() => {
+                        setIsRangeMode(true);
+                        setSelectedDates([]);
+                      }}
+                      className="flex-1"
+                    >
+                      Date Range
+                    </Button>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-base font-semibold">Select Date</Label>
+                    <Label className="text-base font-semibold">
+                      {isRangeMode ? "Select Date Range" : "Select Multiple Dates"}
+                    </Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
                             "w-full h-12 justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
+                            selectedDates.length === 0 && !dateRangeStart && "text-muted-foreground"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-5 w-5" />
-                          {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                          {isRangeMode
+                            ? (dateRangeStart && dateRangeEnd
+                                ? `${format(dateRangeStart, "PP")} - ${format(dateRangeEnd, "PP")}`
+                                : dateRangeStart
+                                ? `Start: ${format(dateRangeStart, "PP")}`
+                                : "Pick date range")
+                            : selectedDates.length > 0
+                            ? `${selectedDates.length} day${selectedDates.length > 1 ? "s" : ""} selected`
+                            : "Pick dates"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
+                          selected={isRangeMode ? dateRangeStart : selectedDates[0]}
+                          onSelect={handleDateSelect}
                           disabled={(date) => date < new Date()}
                           initialFocus
                           className="pointer-events-auto"
@@ -275,19 +360,42 @@ const Booking = () => {
                     </Popover>
                   </div>
 
+                  {!isRangeMode && selectedDates.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Selected Dates:</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedDates.map((date, index) => (
+                          <Badge key={index} variant="secondary" className="text-sm py-2 px-3">
+                            {format(date, "MMM dd, yyyy")}
+                            <X
+                              className="ml-2 h-3 w-3 cursor-pointer"
+                              onClick={() => setSelectedDates(selectedDates.filter((_, i) => i !== index))}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
-                    <Label htmlFor="start-time" className="text-base font-semibold">Start Time</Label>
+                    <Label className="text-base font-semibold">Hours per Day</Label>
                     <Input
-                      id="start-time"
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      type="number"
+                      min="1"
+                      max="24"
+                      value={hoursPerDay}
+                      onChange={(e) => setHoursPerDay(e.target.value)}
                       className="h-12"
                     />
                   </div>
 
                   <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 rounded-xl border-2 border-primary/30">
-                    <p className="text-2xl font-bold text-primary">Total Price: ${calculatePrice().toFixed(2)}</p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        {getDaysCount()} day{getDaysCount() > 1 ? "s" : ""} × {hoursPerDay} hour{parseInt(hoursPerDay) > 1 ? "s" : ""}/day × ${selectedServiceData?.price_hourly}/hr
+                      </p>
+                      <p className="text-2xl font-bold text-primary">Total: ${calculateTotalPrice().toFixed(2)}</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -296,7 +404,7 @@ const Booking = () => {
               {step === 3 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="client-name" className="text-base font-semibold">Full Name</Label>
+                    <Label htmlFor="client-name" className="text-base font-semibold">Your Full Name</Label>
                     <Input
                       id="client-name"
                       value={clientName}
@@ -306,7 +414,7 @@ const Booking = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-base font-semibold">Email</Label>
+                    <Label htmlFor="email" className="text-base font-semibold">Your Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -317,7 +425,7 @@ const Booking = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-base font-semibold">Phone Number</Label>
+                    <Label htmlFor="phone" className="text-base font-semibold">Your Phone Number</Label>
                     <Input
                       id="phone"
                       type="tel"
@@ -328,15 +436,48 @@ const Booking = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="text-base font-semibold">Full Address</Label>
+                    <Label htmlFor="address" className="text-base font-semibold">Service Address</Label>
                     <Textarea
                       id="address"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="123 Main St, Apt 4B, New York, NY 10001"
-                      rows={4}
+                      rows={3}
                       className="resize-none"
                     />
+                  </div>
+                  
+                  <div className="border-t pt-6 mt-6">
+                    <h3 className="font-semibold text-lg mb-4">Care Recipient Information</h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="recipient-name" className="text-base font-semibold">
+                          Full Name of Person Receiving Care
+                        </Label>
+                        <Input
+                          id="recipient-name"
+                          value={recipientName}
+                          onChange={(e) => setRecipientName(e.target.value)}
+                          placeholder="Jane Doe"
+                          className="h-12"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="recipient-type" className="text-base font-semibold">
+                          Type of Care Recipient
+                        </Label>
+                        <Select value={recipientType} onValueChange={setRecipientType}>
+                          <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Select type..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="elderly">Elderly Person</SelectItem>
+                            <SelectItem value="disabled">Disabled Person</SelectItem>
+                            <SelectItem value="both">Both Elderly and Disabled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -352,33 +493,33 @@ const Booking = () => {
                         <span className="font-bold text-lg">{selectedServiceData?.name}</span>
                       </div>
                       <div className="flex justify-between items-center py-3 border-b">
-                        <span className="text-muted-foreground font-medium">Date:</span>
-                        <span className="font-bold text-lg">
-                          {selectedDate && format(selectedDate, "PPP")}
+                        <span className="text-muted-foreground font-medium">Dates:</span>
+                        <span className="font-bold text-lg text-right">
+                          {isRangeMode && dateRangeStart && dateRangeEnd
+                            ? `${format(dateRangeStart, "MMM dd")} - ${format(dateRangeEnd, "MMM dd, yyyy")}`
+                            : selectedDates.length > 0
+                            ? `${selectedDates.length} day${selectedDates.length > 1 ? "s" : ""}`
+                            : "No dates selected"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-3 border-b">
-                        <span className="text-muted-foreground font-medium">Time:</span>
-                        <span className="font-bold text-lg">{startTime}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-3 border-b">
-                        <span className="text-muted-foreground font-medium">Duration:</span>
-                        <span className="font-bold text-lg">{duration} hours</span>
+                        <span className="text-muted-foreground font-medium">Hours per Day:</span>
+                        <span className="font-bold text-lg">{hoursPerDay} hours</span>
                       </div>
                       <div className="flex justify-between items-center pt-4">
                         <span className="text-muted-foreground font-medium text-xl">Total Price:</span>
                         <span className="font-bold text-primary text-3xl">
-                          ${calculatePrice().toFixed(2)}
+                          ${calculateTotalPrice().toFixed(2)}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-secondary/50 p-8 rounded-xl space-y-4">
-                    <h3 className="font-bold text-xl">Client Information</h3>
+                    <h3 className="font-bold text-xl">Contact Information</h3>
                     <div className="space-y-3">
                       <p className="flex justify-between">
-                        <span className="text-muted-foreground">Name:</span>
+                        <span className="text-muted-foreground">Your Name:</span>
                         <span className="font-semibold">{clientName}</span>
                       </p>
                       <p className="flex justify-between">
@@ -391,13 +532,31 @@ const Booking = () => {
                       </p>
                       <p className="flex justify-between">
                         <span className="text-muted-foreground">Address:</span>
-                        <span className="font-semibold text-right">{address}</span>
+                        <span className="font-semibold text-right max-w-xs">{address}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-secondary/50 p-8 rounded-xl space-y-4">
+                    <h3 className="font-bold text-xl">Care Recipient</h3>
+                    <div className="space-y-3">
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">Name:</span>
+                        <span className="font-semibold">{recipientName}</span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">Type:</span>
+                        <span className="font-semibold">
+                          {recipientType === "elderly" && "Elderly Person"}
+                          {recipientType === "disabled" && "Disabled Person"}
+                          {recipientType === "both" && "Elderly and Disabled"}
+                        </span>
                       </p>
                     </div>
                   </div>
 
                   <p className="text-sm text-muted-foreground text-center italic">
-                    By confirming this booking, you agree to our terms of service. We'll send you a confirmation email shortly.
+                    By confirming this booking, you agree to our terms of service. We'll contact you to assign an agent and confirm your booking.
                   </p>
                 </div>
               )}
@@ -415,7 +574,7 @@ const Booking = () => {
                   </Button>
                 ) : (
                   <Button onClick={handleSubmit} className="ml-auto h-12 px-8 text-lg" disabled={isSubmitting}>
-                    {isSubmitting ? "Confirming..." : "Confirm Booking"}
+                    {isSubmitting ? "Sending..." : "Confirm Booking"}
                   </Button>
                 )}
               </div>

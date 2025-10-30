@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Mail, Phone, MapPin } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-careease-usa.png";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,11 +24,11 @@ export const Footer = () => {
           {/* Logo & Description */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <img src={logo} alt="CareEase NY" className="h-10 w-10" />
-              <span className="text-xl font-bold text-foreground">CareEase NY</span>
+              <img src={logo} alt="CareEase USA" className="h-10 w-10" />
+              <span className="text-xl font-bold text-foreground">CareEase USA</span>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              Professional home health aide services in New York. Providing quality care and support to help you or your loved ones live comfortably at home.
+              Professional home health aide services for elderly and disabled individuals across the USA. Providing quality care and support to help you or your loved ones live comfortably at home.
             </p>
           </div>
 
@@ -110,7 +110,7 @@ export const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>{settings?.footer_text || "© 2025 CareEase NY. All rights reserved."}</p>
+          <p>{settings?.footer_text || "© 2025 CareEase USA. All rights reserved."}</p>
         </div>
       </div>
     </footer>

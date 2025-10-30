@@ -74,7 +74,7 @@ const Index = () => {
             <div className="absolute inset-0">
               <img 
                 src={heroImage} 
-                alt="CareEase NY - Professional Home Health Care" 
+                alt="CareEase USA - Professional Home Health Care for Elderly and Disabled" 
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-transparent"></div>
@@ -89,7 +89,7 @@ const Index = () => {
                       Your well-being, our daily priority
                     </h1>
                     <p className="text-lg md:text-xl mb-8 text-white/90 leading-relaxed">
-                      Compassionate and reliable care for you or your loved ones. Available 24/7 to help you maintain independence and quality of life at home.
+                      Compassionate and reliable care for elderly and disabled individuals. Available 24/7 to help you maintain independence and quality of life at home.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 mb-12">
                       <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-xl">
@@ -131,7 +131,7 @@ const Index = () => {
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-5xl font-bold mb-4">Our Services</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Comprehensive home health aide services tailored to your needs
+                Specialized home health aide services for elderly and disabled individuals
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

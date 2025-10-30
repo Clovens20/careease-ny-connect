@@ -35,13 +35,20 @@ export type Database = {
       bookings: {
         Row: {
           address: string
+          assigned_agent: string | null
           client_name: string
           created_at: string | null
           date: string
+          date_range_end: string | null
+          date_range_start: string | null
           duration_hours: number
           email: string
+          hours_per_day: number | null
           id: string
           phone: string
+          recipient_name: string | null
+          recipient_type: string | null
+          selected_dates: string[] | null
           service_id: string | null
           start_time: string
           status: Database["public"]["Enums"]["booking_status"] | null
@@ -49,13 +56,20 @@ export type Database = {
         }
         Insert: {
           address: string
+          assigned_agent?: string | null
           client_name: string
           created_at?: string | null
           date: string
+          date_range_end?: string | null
+          date_range_start?: string | null
           duration_hours: number
           email: string
+          hours_per_day?: number | null
           id?: string
           phone: string
+          recipient_name?: string | null
+          recipient_type?: string | null
+          selected_dates?: string[] | null
           service_id?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["booking_status"] | null
@@ -63,13 +77,20 @@ export type Database = {
         }
         Update: {
           address?: string
+          assigned_agent?: string | null
           client_name?: string
           created_at?: string | null
           date?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
           duration_hours?: number
           email?: string
+          hours_per_day?: number | null
           id?: string
           phone?: string
+          recipient_name?: string | null
+          recipient_type?: string | null
+          selected_dates?: string[] | null
           service_id?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["booking_status"] | null
@@ -91,6 +112,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_active: boolean | null
           name: string
           price_daily: number | null
           price_hourly: number | null
@@ -100,6 +122,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           name: string
           price_daily?: number | null
           price_hourly?: number | null
@@ -109,6 +132,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           name?: string
           price_daily?: number | null
           price_hourly?: number | null
@@ -185,10 +209,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: {
-        Args: { user_email: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { user_email: string }; Returns: boolean }
     }
     Enums: {
       booking_status: "pending" | "confirmed" | "cancelled" | "completed"
