@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { useQueryClient } from "@tanstack/react-query";
 
 type Contract = {
   id: string;
@@ -53,59 +52,113 @@ const AdminContracts = () => {
   });
 
   const handleAdminSign = async (contractId: string) => {
-    if (!sigCanvasRef.current) return;
+    if (!sigCanvasRef.current) {
+      toast({
+        title: "Error",
+        description: "Please provide a signature",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const signature = sigCanvasRef.current.getTrimmedCanvas().toDataURL("image/png");
+    
+    if (!signature || signature.length < 100) {
+      toast({
+        title: "Error",
+        description: "Signature is too short. Please sign properly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(contractId);
     
-    const { error } = await supabase
+    // 1. D'abord sauvegarder la signature
+    const { error: updateError } = await supabase
       .from("contracts")
       .update({ admin_signature: signature, status: "completed" })
       .eq("id", contractId);
     
-    if (error) {
+    if (updateError) {
+      console.error("Error saving signature:", updateError);
       toast({
         title: "Error",
-        description: "Failed to save signature",
+        description: "Failed to save signature: " + updateError.message,
         variant: "destructive",
       });
       setSaving(null);
       return;
     }
+
+    console.log("✅ Signature saved successfully. Now sending email...");
     
-    // ✅ Envoyer l'email avec le contrat final signé
+    // 2. Ensuite envoyer l'email avec le contrat final signé
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-signed-contract`, {
+      if (!supabaseUrl) {
+        throw new Error("VITE_SUPABASE_URL is not configured");
+      }
+
+      console.log("Calling Edge Function:", `${supabaseUrl}/functions/v1/send-signed-contract`);
+      console.log("Contract ID:", contractId);
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-signed-contract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || ''}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
         },
         body: JSON.stringify({ contractId }),
       });
 
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
       if (!response.ok) {
-        const error = await response.json();
-        console.error("Email edge function error:", error);
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          errorData = { error: responseText };
+        }
+        
+        console.error("❌ Email edge function error:", errorData);
         toast({
           title: "Contract Signed",
-          description: "Signature saved, but email notification failed. Please check the contract.",
+          description: `Signature saved, but email failed: ${errorData.error || 'Unknown error'}. Check console for details.`,
           variant: "default",
         });
       } else {
-        const result = await response.json();
-        console.log("Signed contract email sent successfully:", result);
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch {
+          result = { success: true, message: responseText };
+        }
+        
+        console.log("✅ Signed contract email sent successfully:", result);
         toast({
           title: "Contract Signed Successfully",
-          description: "The fully signed contract has been sent to the client's email.",
+          description: `The fully signed contract has been sent to the client's email (${contracts?.find(c => c.id === contractId)?.client_email || 'N/A'}).`,
         });
       }
     } catch (error: any) {
-      console.error("Failed to send signed contract email:", error);
+      console.error("❌ Failed to send signed contract email:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+      });
       toast({
         title: "Contract Signed",
-        description: "Signature saved, but email notification failed. Please try again later.",
+        description: `Signature saved, but email notification failed: ${error?.message || 'Network error'}. Please check console and try again.`,
         variant: "default",
       });
     }
@@ -197,7 +250,7 @@ const AdminContracts = () => {
                           onClick={() => handleAdminSign(contract.id)} 
                           disabled={saving === contract.id}
                         >
-                          {saving === contract.id ? "Signing..." : "Sign & Send to Client"}
+                          {saving === contract.id ? "Signing & Sending..." : "Sign & Send to Client"}
                         </Button>
                       </div>
                     </div>
