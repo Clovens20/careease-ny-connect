@@ -13,8 +13,8 @@ import { Star } from "lucide-react";
 
 type Testimonial = {
   id: string;
-  author: string;
-  text: string;
+  author_name: string;
+  message: string;
   rating: number;
   created_at: string;
 };
@@ -33,15 +33,22 @@ const Testimonials = () => {
         .from("testimonials")
         .select("*")
         .eq("is_active", true)
+        .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Testimonial[];
     },
   });
 
   const createTestimonial = useMutation({
-    mutationFn: async (payload: { author: string; text: string; rating: number }) => {
-      const { error } = await supabase.from("testimonials").insert([payload]);
+    mutationFn: async (payload: { author_name: string; message: string; rating: number }) => {
+      const { error } = await supabase.from("testimonials").insert({
+        author_name: payload.author_name,
+        message: payload.message,
+        rating: payload.rating,
+        is_active: false,
+        is_published: false,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -73,7 +80,7 @@ const Testimonials = () => {
       });
       return;
     }
-    createTestimonial.mutate({ author: name.trim(), text: text.trim(), rating });
+    createTestimonial.mutate({ author_name: name.trim(), message: text.trim(), rating });
   };
 
   return (
@@ -103,14 +110,14 @@ const Testimonials = () => {
                   <Card key={testimonial.id} className="hover:shadow-2xl transition-all">
                     <CardContent className="pt-8 pb-8">
                       <div className="flex justify-center mb-6">
-                        {[...Array(testimonial.rating)].map((_, i) => (
+                        {[...Array(Math.floor(testimonial.rating))].map((_, i) => (
                           <Star key={i} className="h-6 w-6 text-primary fill-primary" />
                         ))}
                       </div>
                       <p className="text-muted-foreground mb-6 italic leading-relaxed text-center">
-                        "{testimonial.text}"
+                        "{testimonial.message}"
                       </p>
-                      <p className="font-bold text-lg text-center text-primary">{testimonial.author}</p>
+                      <p className="font-bold text-lg text-center text-primary">{testimonial.author_name}</p>
                     </CardContent>
                   </Card>
                 ))}

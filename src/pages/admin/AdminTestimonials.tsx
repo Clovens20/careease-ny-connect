@@ -29,10 +29,11 @@ import {
 
 type Testimonial = {
   id: string;
-  author: string;
-  text: string;
+  author_name: string;
+  message: string;
   rating: number;
   is_active?: boolean | null;
+  is_published?: boolean | null;
   created_at: string;
   updated_at?: string | null;
 };
@@ -55,12 +56,19 @@ function useCreateTestimonial() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
-      author: string;
-      text: string;
+      author_name: string;
+      message: string;
       rating: number;
       is_active?: boolean;
+      is_published?: boolean;
     }) => {
-      const { error } = await supabase.from("testimonials").insert([payload]);
+      const { error } = await supabase.from("testimonials").insert({
+        author_name: payload.author_name,
+        message: payload.message,
+        rating: payload.rating,
+        is_active: payload.is_active ?? true,
+        is_published: payload.is_published ?? true,
+      });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["testimonials", "all"] }),
@@ -72,10 +80,11 @@ function useUpdateTestimonial() {
   return useMutation({
     mutationFn: async (payload: {
       id: string;
-      author?: string;
-      text?: string;
+      author_name?: string;
+      message?: string;
       rating?: number;
       is_active?: boolean;
+      is_published?: boolean;
     }) => {
       const { id, ...rest } = payload;
       const { error } = await supabase
@@ -115,24 +124,27 @@ const AdminTestimonials = () => {
   const [testimonialToDelete, setTestimonialToDelete] = useState<string | null>(null);
   
   const [form, setForm] = useState<{
-    author: string;
-    text: string;
+    author_name: string;
+    message: string;
     rating: string;
     is_active: boolean;
+    is_published: boolean;
   }>({
-    author: "",
-    text: "",
+    author_name: "",
+    message: "",
     rating: "5",
     is_active: true,
+    is_published: true,
   });
 
   const openCreate = () => {
     setEditing(null);
     setForm({
-      author: "",
-      text: "",
+      author_name: "",
+      message: "",
       rating: "5",
       is_active: true,
+      is_published: true,
     });
     setIsFormOpen(true);
   };
@@ -140,10 +152,11 @@ const AdminTestimonials = () => {
   const openEdit = (testimonial: Testimonial) => {
     setEditing(testimonial);
     setForm({
-      author: testimonial.author ?? "",
-      text: testimonial.text ?? "",
+      author_name: testimonial.author_name ?? "",
+      message: testimonial.message ?? "",
       rating: String(testimonial.rating ?? 5),
       is_active: Boolean(testimonial.is_active !== false),
+      is_published: Boolean(testimonial.is_published !== false),
     });
     setIsFormOpen(true);
   };
@@ -166,13 +179,14 @@ const AdminTestimonials = () => {
       }
 
       const payload = {
-        author: form.author.trim(),
-        text: form.text.trim(),
+        author_name: form.author_name.trim(),
+        message: form.message.trim(),
         rating: ratingNum,
         is_active: form.is_active,
+        is_published: form.is_published,
       };
 
-      if (!payload.author || !payload.text) {
+      if (!payload.author_name || !payload.message) {
         toast({
           title: "Fields Required",
           description: "Please provide both author name and testimonial text.",
@@ -270,12 +284,12 @@ const AdminTestimonials = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="author">Author Name</Label>
+                <Label htmlFor="author_name">Author Name</Label>
                 <Input
-                  id="author"
+                  id="author_name"
                   className="mt-1"
-                  value={form.author}
-                  onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
+                  value={form.author_name}
+                  onChange={(e) => setForm((f) => ({ ...f, author_name: e.target.value }))}
                   placeholder="e.g., Maria S."
                 />
               </div>
@@ -299,12 +313,12 @@ const AdminTestimonials = () => {
               </div>
             </div>
             <div>
-              <Label htmlFor="text">Testimonial Text</Label>
+              <Label htmlFor="message">Testimonial Text</Label>
               <Textarea
-                id="text"
+                id="message"
                 className="mt-1 min-h-[120px]"
-                value={form.text}
-                onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
+                value={form.message}
+                onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
                 placeholder="Enter the testimonial text..."
               />
             </div>
@@ -318,6 +332,18 @@ const AdminTestimonials = () => {
               />
               <Label htmlFor="is_active" className="cursor-pointer">
                 Active (visible on website)
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="is_published"
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300"
+                checked={form.is_published}
+                onChange={(e) => setForm((f) => ({ ...f, is_published: e.target.checked }))}
+              />
+              <Label htmlFor="is_published" className="cursor-pointer">
+                Published (visible on homepage)
               </Label>
             </div>
           </div>
@@ -347,16 +373,19 @@ const AdminTestimonials = () => {
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
-                    <h3 className="font-semibold text-lg">{testimonial.author}</h3>
+                    <h3 className="font-semibold text-lg">{testimonial.author_name}</h3>
                     <Badge
                       variant={testimonial.is_active !== false ? "default" : "secondary"}
                     >
                       {testimonial.is_active !== false ? "Active" : "Inactive"}
                     </Badge>
+                    {testimonial.is_published && (
+                      <Badge variant="outline">Published</Badge>
+                    )}
                   </div>
                   <div className="mb-3">{renderStars(testimonial.rating)}</div>
                   <p className="text-sm text-muted-foreground italic leading-relaxed">
-                    "{testimonial.text}"
+                    "{testimonial.message}"
                   </p>
                   <p className="text-xs text-muted-foreground mt-3">
                     Created: {new Date(testimonial.created_at).toLocaleDateString()}

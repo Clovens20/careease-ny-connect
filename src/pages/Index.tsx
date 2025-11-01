@@ -179,7 +179,7 @@ const Index = () => {
 
   // ✅ Mutation pour créer un témoignage (CORRIGÉ)
   const createTestimonial = useMutation({
-    mutationFn: async (payload: { author: string; text: string; rating: number; email?: string }) => {
+    mutationFn: async (payload: { author_name: string; message: string; rating: number; email?: string }) => {
       // ✅ Vérifier si l'email a fait une réservation (optionnel)
       if (payload.email) {
         try {
@@ -201,8 +201,8 @@ const Index = () => {
       const { error } = await supabase
         .from("testimonials")
         .insert({
-          author_name: payload.author,
-          message: payload.text,
+          author_name: payload.author_name,
+          message: payload.message,
           rating: payload.rating,
           is_active: false,
           is_published: false,
@@ -244,8 +244,8 @@ const Index = () => {
       return;
     }
     createTestimonial.mutate({
-      author: formData.name.trim(),
-      text: formData.testimonial.trim(),
+      author_name: formData.name.trim(),
+      message: formData.testimonial.trim(),
       rating: formData.rating,
       email: formData.email.trim() || undefined,
     });
