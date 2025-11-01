@@ -85,36 +85,42 @@ const AdminBookings = () => {
         .eq("id", bookingId);
       if (error) throw error;
 
-      // ✅ AJOUTER: Envoyer l'email de confirmation avec tous les détails
+      // ✅ APPELER l'Edge Function Supabase (pas de CORS)
       const bookingData = bookings?.find(b => b.id === bookingId);
       if (bookingData) {
-        const parsedNotes = parseNotes(bookingData.notes);
-        console.log("Sending email to:", bookingData.user_email);
-        await sendBookingConfirmationEmail({
-          bookingId,
-          clientName: bookingData.user_full_name,
-          clientEmail: bookingData.user_email,
-          serviceName: bookingData.services?.name || 'Service',
-          date: bookingData.date,
-          startTime: bookingData.start_time,
-          endTime: bookingData.end_time,
-          agentName,
-          notes: bookingData.notes || '',
-          city: bookingData.city || undefined,
-          // ✅ NOUVEAUX CHAMPS
-          clientPhone: parsedNotes.phone || undefined,
-          clientAddress: parsedNotes.address || undefined,
-          totalPrice: parsedNotes.totalPrice || undefined,
-        });
-      } else {
-        console.error("Booking data not found for ID:", bookingId);
-        throw new Error("Booking data not found");
+        // Appeler l'Edge Function en arrière-plan
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-booking-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`,
+          },
+          body: JSON.stringify({
+            bookingId,
+            agentName,
+          }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const error = await res.json();
+              console.error("Email edge function error:", error);
+            } else {
+              const result = await res.json();
+              console.log("Email sent successfully via edge function:", result);
+            }
+          })
+          .catch((error) => {
+            console.error("Failed to call email edge function:", error);
+            // Ne pas bloquer la mutation
+          });
       }
     },
     onSuccess: () => {
       toast({
         title: "Agent Assigned Successfully",
-        description: "The booking has been confirmed and the client will be notified.",
+        description: "The booking has been confirmed. The client will receive an email notification shortly.",
       });
       queryClient.invalidateQueries({ queryKey: ["admin-all-bookings"] });
       setIsDialogOpen(false);

@@ -24,6 +24,7 @@ import AdminContact from "./pages/admin/AdminContact";
 import NotFound from "./pages/NotFound";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AdminContracts from "./pages/admin/AdminContracts";
+import AdminPaymentMethods from "./pages/admin/AdminPaymentMethods";
 import ContractPage from "./pages/contract/[id]";
 
 const queryClient = new QueryClient({
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="settings" element={<AdminSettings />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="contracts" element={<AdminContracts />} />
+              <Route path="payment-methods" element={<AdminPaymentMethods />} />
             </Route>
             
             {/* 404 */}
