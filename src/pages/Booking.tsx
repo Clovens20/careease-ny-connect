@@ -230,6 +230,7 @@ const Booking = () => {
         notes: notesContent,
         status: "pending" as const,
         city: city,
+        total_price: totalPrice, // ✅ AJOUTER ce champ
         // ✅ AJOUTER les champs de range si mode range
         ...(isRangeMode && dateRangeStart && dateRangeEnd ? {
           date_range_start: format(dateRangeStart, "yyyy-MM-dd"),
