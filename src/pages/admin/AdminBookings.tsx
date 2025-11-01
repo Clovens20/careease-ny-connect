@@ -79,23 +79,30 @@ const AdminBookings = () => {
       // ✅ AJOUTER: Envoyer l'email de confirmation avec tous les détails
       const bookingData = bookings?.find(b => b.id === bookingId);
       if (bookingData) {
-        const parsedNotes = parseNotes(bookingData.notes);
-        await sendBookingConfirmationEmail({
-          bookingId,
-          clientName: bookingData.user_full_name,
-          clientEmail: bookingData.user_email,
-          serviceName: bookingData.services?.name || 'Service',
-          date: bookingData.date,
-          startTime: bookingData.start_time,
-          endTime: bookingData.end_time,
-          agentName,
-          notes: bookingData.notes || '',
-          city: bookingData.city || undefined,
-          // ✅ NOUVEAUX CHAMPS
-          clientPhone: parsedNotes.phone || undefined,
-          clientAddress: parsedNotes.address || undefined,
-          totalPrice: parsedNotes.totalPrice || undefined,
-        });
+        try {
+          const parsedNotes = parseNotes(bookingData.notes);
+          console.log("Sending email to:", bookingData.user_email);
+          await sendBookingConfirmationEmail({
+            bookingId,
+            clientName: bookingData.user_full_name,
+            clientEmail: bookingData.user_email,
+            serviceName: bookingData.services?.name || 'Service',
+            date: bookingData.date,
+            startTime: bookingData.start_time,
+            endTime: bookingData.end_time,
+            agentName,
+            notes: bookingData.notes || '',
+            city: bookingData.city || undefined,
+            // ✅ NOUVEAUX CHAMPS
+            clientPhone: parsedNotes.phone || undefined,
+            clientAddress: parsedNotes.address || undefined,
+            totalPrice: parsedNotes.totalPrice || undefined,
+          });
+          console.log("Email sent successfully");
+        } catch (emailError) {
+          console.error("Email error:", emailError);
+          // Continue même si l'email échoue
+        }
       }
     },
     onSuccess: () => {

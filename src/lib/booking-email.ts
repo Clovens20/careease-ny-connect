@@ -254,49 +254,56 @@ export async function generateBookingContract(data: BookingEmailData): Promise<U
 }
 
 export async function sendBookingConfirmationEmail(data: BookingEmailData): Promise<void> {
-  // Generate PDF
-  const pdfBuffer = await generateBookingContract(data);
-  const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
-  
-  // Send email with PDF attachment
-  await resend.emails.send({
-    from: 'CareEase USA <contact@careeaseusa.com>',
-    to: data.clientEmail,
-    subject: `Your ${data.serviceName} Service is Confirmed`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Service Confirmed!</h2>
-        <p>Dear ${data.clientName},</p>
-        <p>Your service request has been confirmed. Here are the details:</p>
-        
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Service Details</h3>
-          <p><strong>Service:</strong> ${data.serviceName}</p>
-          <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
-          <p><strong>Time:</strong> ${data.startTime} - ${data.endTime}</p>
-          <p><strong>Assigned Agent:</strong> ${data.agentName}</p>
+  try {
+    console.log("Generating PDF for booking:", data.bookingId);
+    const pdfBuffer = await generateBookingContract(data);
+    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+    
+    console.log("Sending email to:", data.clientEmail);
+    const result = await resend.emails.send({
+      from: 'CareEase USA <contact@careeaseusa.com>',
+      to: data.clientEmail,
+      subject: `Your ${data.serviceName} Service is Confirmed`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Service Confirmed!</h2>
+          <p>Dear ${data.clientName},</p>
+          <p>Your service request has been confirmed. Here are the details:</p>
+          
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Service Details</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
+            <p><strong>Time:</strong> ${data.startTime} - ${data.endTime}</p>
+            <p><strong>Assigned Agent:</strong> ${data.agentName}</p>
+          </div>
+          
+          <p>Your service agreement is attached to this email. Please review it carefully.</p>
+          
+          <p>If you have any questions or need to make changes, please contact us:</p>
+          <p>Phone: 3474711520<br>Email: contact@careeaseusa.com</p>
+          
+          <p style="margin-top: 30px;">Thank you for choosing CareEase USA!</p>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 12px;">
+            This is an automated message. Please do not reply to this email.
+          </p>
         </div>
-        
-        <p>Your service agreement is attached to this email. Please review it carefully.</p>
-        
-        <p>If you have any questions or need to make changes, please contact us:</p>
-        <p>Phone: 3474711520<br>Email: contact@careeaseusa.com</p>
-        
-        <p style="margin-top: 30px;">Thank you for choosing CareEase USA!</p>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        <p style="color: #6b7280; font-size: 12px;">
-          This is an automated message. Please do not reply to this email.
-        </p>
-      </div>
-    `,
-    attachments: [
-      {
-        filename: `service-agreement-${data.bookingId}.pdf`,
-        content: pdfBase64,
-      },
-    ],
-  });
+      `,
+      attachments: [
+        {
+          filename: `service-agreement-${data.bookingId}.pdf`,
+          content: pdfBase64,
+        },
+      ],
+    });
+    
+    console.log("Email sent successfully:", result);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw error;
+  }
 }
 
 export async function sendBookingRejectionEmail(data: {
