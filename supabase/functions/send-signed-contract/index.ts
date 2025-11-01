@@ -34,6 +34,7 @@ function generateSignedContractPDF(data: {
 }): Uint8Array {
   const doc = new jsPDF();
   let pageHeight = doc.internal.pageSize.height;
+  let y = 0;
   
   // Helper function to add new page if needed
   const checkPageBreak = (requiredSpace: number) => {
@@ -45,16 +46,27 @@ function generateSignedContractPDF(data: {
     return false;
   };
 
+  // Helper pour convertir data URL en base64 pur
+  const convertDataUrlToBase64 = (dataUrl: string): string => {
+    if (!dataUrl) return '';
+    // Si c'est déjà un base64 pur, retourner tel quel
+    if (!dataUrl.includes(',')) return dataUrl;
+    // Extraire la partie base64 après la virgule
+    const base64Part = dataUrl.split(',')[1];
+    return base64Part || '';
+  };
+
   // Header
+  y = 20;
   doc.setFontSize(18);
-  doc.text('CARE EASE USA LLC – SERVICE AGREEMENT', 105, 20, { align: 'center' });
+  doc.text('CARE EASE USA LLC – SERVICE AGREEMENT', 105, y, { align: 'center' });
   
   doc.setFontSize(10);
   doc.text(`Contract No.: ${data.contractId.substring(0, 8)}`, 105, 28, { align: 'center' });
   doc.text(`Date: ${new Date(data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 105, 35, { align: 'center' });
   
   // 1. Client Information
-  let y = 55;
+  y = 55;
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('1. Client Information', 20, y);
@@ -198,11 +210,19 @@ function generateSignedContractPDF(data: {
   y += 7;
   doc.text('Signature:', 20, y);
   
-  // Add client signature image
+  // Add client signature image - Version corrigée
+  y += 5;
   try {
-    doc.addImage(data.clientSignature, 'PNG', 20, y + 5, 80, 30);
-    y += 40;
-  } catch (e) {
+    const clientSigBase64 = convertDataUrlToBase64(data.clientSignature);
+    if (clientSigBase64 && clientSigBase64.length > 0) {
+      // Utiliser addImage avec le base64 pur
+      doc.addImage(clientSigBase64, 'PNG', 20, y, 80, 30);
+      y += 35;
+    } else {
+      throw new Error("Invalid signature format");
+    }
+  } catch (e: any) {
+    console.warn("Could not add client signature image:", e?.message);
     y += 15;
     doc.setLineWidth(0.5);
     doc.line(20, y, 100, y);
@@ -231,11 +251,19 @@ function generateSignedContractPDF(data: {
   y += 7;
   doc.text('Signature:', 20, y);
   
-  // Add admin signature image
+  // Add admin signature image - Version corrigée
+  y += 5;
   try {
-    doc.addImage(data.adminSignature, 'PNG', 20, y + 5, 80, 30);
-    y += 40;
-  } catch (e) {
+    const adminSigBase64 = convertDataUrlToBase64(data.adminSignature);
+    if (adminSigBase64 && adminSigBase64.length > 0) {
+      // Utiliser addImage avec le base64 pur
+      doc.addImage(adminSigBase64, 'PNG', 20, y, 80, 30);
+      y += 35;
+    } else {
+      throw new Error("Invalid signature format");
+    }
+  } catch (e: any) {
+    console.warn("Could not add admin signature image:", e?.message);
     y += 15;
     doc.setLineWidth(0.5);
     doc.line(20, y, 100, y);
@@ -278,9 +306,12 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
+    console.log("📧 Starting signed contract email process for contract:", contractId);
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    // Récupérer le contrat avec ses signatures
+    // ✅ CORRECTION: Simplifier la requête pour éviter les relations circulaires
+    // D'abord récupérer le contrat
     const { data: contract, error: contractError } = await supabase
       .from("contracts")
       .select(`
@@ -291,29 +322,44 @@ serve(async (req) => {
         services,
         start_date,
         client_signature,
-        admin_signature,
-        bookings(
-          id,
-          start_time,
-          end_time,
-          notes,
-          city,
-          assigned_agent,
-          services(name)
-        )
+        admin_signature
       `)
       .eq("id", contractId)
       .single();
 
     if (contractError || !contract) {
+      console.error("❌ Contract fetch error:", contractError);
       throw new Error(`Contract not found: ${contractError?.message}`);
     }
+
+    console.log("✅ Contract found:", contract.id);
+    console.log("Client:", contract.client_name, contract.client_email);
 
     if (!contract.client_signature || !contract.admin_signature) {
       throw new Error("Contract is not fully signed by both parties");
     }
 
-    const booking = contract.bookings;
+    // ✅ Ensuite récupérer les données du booking séparément (évite la relation circulaire)
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select(`
+        id,
+        start_time,
+        end_time,
+        notes,
+        city,
+        assigned_agent,
+        service_id,
+        services!inner(name)
+      `)
+      .eq("id", contract.booking_id)
+      .single();
+
+    if (bookingError) {
+      console.warn("⚠️ Booking fetch error (will use defaults):", bookingError);
+    }
+
+    console.log("✅ Booking data retrieved");
 
     // Récupérer les méthodes de paiement
     const { data: paymentMethods } = await supabase
@@ -337,6 +383,8 @@ serve(async (req) => {
 
     const parsedNotes = parseNotes(booking?.notes || null);
 
+    console.log("✅ Starting PDF generation...");
+
     // Générer le PDF avec les deux signatures
     const pdfBuffer = generateSignedContractPDF({
       contractId: contract.id,
@@ -344,7 +392,7 @@ serve(async (req) => {
       clientEmail: contract.client_email,
       clientPhone: parsedNotes.phone || undefined,
       clientAddress: parsedNotes.address || undefined,
-      serviceName: contract.services || booking?.services?.name || 'Service',
+      serviceName: contract.services || (booking?.services as any)?.name || 'Service',
       date: contract.start_date,
       startTime: booking?.start_time || '09:00',
       endTime: booking?.end_time || '17:00',
@@ -356,10 +404,16 @@ serve(async (req) => {
       adminSignature: contract.admin_signature,
     });
 
+    console.log("✅ PDF generated, size:", pdfBuffer.byteLength);
+
     const pdfBase64 = btoa(String.fromCharCode(...pdfBuffer));
+
+    console.log("✅ PDF base64 encoded, length:", pdfBase64.length);
 
     // Envoyer l'email avec le PDF signé
     const resend = new Resend(RESEND_API_KEY);
+
+    console.log("📧 Sending email to:", contract.client_email);
 
     const emailResult = await resend.emails.send({
       from: "CareEase USA <contact@careeaseusa.com>",
@@ -399,6 +453,8 @@ serve(async (req) => {
       ],
     });
 
+    console.log("✅ Email sent successfully:", emailResult.data?.id);
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -413,9 +469,11 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Edge function error:", error);
+    console.error("❌ Edge function error:", error);
+    console.error("Error message:", error?.message);
+    console.error("Error stack:", error?.stack);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || "Internal server error" }),
       { 
         headers: { 
           "Content-Type": "application/json",
