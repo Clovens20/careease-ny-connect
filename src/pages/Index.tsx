@@ -120,7 +120,7 @@ const Index = () => {
     },
   ];
 
-  // ✅ Récupérer les testimonials depuis Supabase
+  // ✅ Récupérer les testimonials depuis Supabase (CORRIGÉ)
   const { data: testimonials = [] } = useQuery({
     queryKey: ["testimonials", "homepage"],
     queryFn: async () => {
@@ -128,25 +128,43 @@ const Index = () => {
         .from("testimonials")
         .select("*")
         .eq("is_active", true)
+        .eq("is_published", true)
         .order("created_at", { ascending: false })
         .limit(3);
       if (error) throw error;
-      return data ?? [];
+      // ✅ Transformer les données pour utiliser author_name et message
+      return (data ?? []).map((item: any) => ({
+        id: item.id,
+        author: item.author_name,
+        text: item.message,
+        rating: typeof item.rating === 'number' ? item.rating : parseInt(item.rating.toString()),
+        created_at: item.created_at,
+      }));
     },
   });
 
-  // ✅ Récupérer les statistiques depuis Supabase
+  // ✅ Récupérer les statistiques depuis Supabase (avec gestion d'erreur si table n'existe pas)
   const { data: statsData = [] } = useQuery({
     queryKey: ["homepage-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("homepage_stats")
-        .select("*")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await supabase
+          .from("homepage_stats")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true });
+        if (error) {
+          // Si la table n'existe pas encore, retourner un tableau vide
+          console.warn("homepage_stats table may not exist yet:", error.message);
+          return [];
+        }
+        return data ?? [];
+      } catch (error) {
+        console.warn("Error fetching homepage_stats:", error);
+        return [];
+      }
     },
+    retry: false, // Ne pas réessayer si la table n'existe pas
   });
 
   // ✅ Transformer les données pour utiliser les icônes
@@ -159,34 +177,36 @@ const Index = () => {
     };
   });
 
-  // ✅ Mutation pour créer un témoignage
+  // ✅ Mutation pour créer un témoignage (CORRIGÉ)
   const createTestimonial = useMutation({
     mutationFn: async (payload: { author: string; text: string; rating: number; email?: string }) => {
-      // Vérifier si l'email a fait une réservation (optionnel mais recommandé)
+      // ✅ Vérifier si l'email a fait une réservation (optionnel)
       if (payload.email) {
-        const { data: bookings, error: bookingError } = await supabase
-          .from("bookings")
-          .select("id")
-          .eq("email", payload.email.toLowerCase())
-          .limit(1);
-        
-        if (bookingError) {
-          console.warn("Could not verify booking:", bookingError);
+        try {
+          const { data: bookings, error: bookingError } = await supabase
+            .from("bookings")
+            .select("id")
+            .eq("user_email", payload.email.toLowerCase())
+            .limit(1);
+          
+          if (bookingError) {
+            console.warn("Could not verify booking:", bookingError);
+          }
+        } catch (error) {
+          console.warn("Error checking booking:", error);
         }
-        
-        // Si aucun booking trouvé, on peut quand même accepter (ou rejeter selon votre politique)
-        // Pour l'instant, on accepte même sans booking pour simplifier
       }
 
-      // Insérer le témoignage (is_active sera false par défaut pour modération admin)
+      // ✅ CORRECTION: Utiliser les colonnes existantes author_name et message
       const { error } = await supabase
         .from("testimonials")
-        .insert([{
-          author: payload.author,
-          text: payload.text,
+        .insert({
+          author_name: payload.author,
+          message: payload.text,
           rating: payload.rating,
-          is_active: false, // ✅ Nécessite approbation admin
-        }]);
+          is_active: false,
+          is_published: false,
+        });
       
       if (error) throw error;
     },
@@ -390,11 +410,11 @@ const Index = () => {
             {/* Existing Testimonials */}
             {testimonials.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                {testimonials.map((testimonial, index) => (
-                  <Card key={index} className="hover:shadow-2xl transition-all duration-300 border-primary/20 bg-white">
+                {testimonials.map((testimonial) => (
+                  <Card key={testimonial.id} className="hover:shadow-2xl transition-all duration-300 border-primary/20 bg-white">
                     <CardContent className="pt-8 pb-8">
                       <div className="flex justify-center mb-6">
-                        {[...Array(testimonial.rating)].map((_, i) => (
+                        {[...Array(Math.floor(testimonial.rating))].map((_, i) => (
                           <Star key={i} className="h-6 w-6 text-primary fill-primary" />
                         ))}
                       </div>
