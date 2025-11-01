@@ -21,6 +21,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminTestimonials from "./pages/admin/AdminTestimonials";
 import AdminAbout from "./pages/admin/AdminAbout";
 import AdminContact from "./pages/admin/AdminContact";
+import AdminHomepageStats from "./pages/admin/AdminHomepageStats";
 import NotFound from "./pages/NotFound";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AdminContracts from "./pages/admin/AdminContracts";
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="about" element={<AdminAbout />} />
               <Route path="contact" element={<AdminContact />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="homepage-stats" element={<AdminHomepageStats />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="contracts" element={<AdminContracts />} />
               <Route path="payment-methods" element={<AdminPaymentMethods />} />

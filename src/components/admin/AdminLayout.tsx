@@ -15,7 +15,8 @@ import {
   Phone,
   Palette,
   FileText,
-  CreditCard
+  CreditCard,
+  BarChart3
 } from "lucide-react";
 import logo from "@/assets/logo-careease-usa.png";
 import { Session } from "@supabase/supabase-js";
@@ -92,6 +93,7 @@ export const AdminLayout = () => {
     { to: "/admin/about", icon: Info, label: "About / Mission" },
     { to: "/admin/contact", icon: Phone, label: "Contact Info" },
     { to: "/admin/settings", icon: Palette, label: "Site Settings" },
+    { to: "/admin/homepage-stats", icon: BarChart3, label: "Homepage Stats" },
     { to: "/admin/bookings", icon: Calendar, label: "Bookings" },
     { to: "/admin/contracts", icon: FileText, label: "Contracts" },
     { to: "/admin/payment-methods", icon: CreditCard, label: "Payment Methods" },

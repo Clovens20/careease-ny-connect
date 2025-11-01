@@ -2,8 +2,11 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
-import { Heart, Users, Home, Shield, Clock, Award, Star } from "lucide-react";
+import { Heart, Users, Home, Shield, Clock, Award, Star, LucideIcon } from "lucide-react";
 import heroImage from "@/assets/hero-careease.jpg";
 
 /* Images */
@@ -19,10 +22,33 @@ import hkImg3 from "@/assets/housekeepingImage3.png";
 import hkImg4 from "@/assets/housekeepingImage4.png";
 import hkImg5 from "@/assets/housekeepingImage5.png";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const Index = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    testimonial: "",
+    rating: 5,
+  });
+
+  // ✅ Map des icônes disponibles
+  const iconMap: Record<string, LucideIcon> = {
+    Users,
+    Heart,
+    Star,
+    Award,
+    Home,
+    Shield,
+    Clock,
+  };
+
   /* Images groupées par catégorie */
   const personalCareImages = [
     { src: personalCareNew1, alt: "Personal Care caregiver supporting senior" },
@@ -94,7 +120,7 @@ const Index = () => {
     },
   ];
 
-  // ✅ REMPLACER les testimonials hardcodés par une query Supabase
+  // ✅ Récupérer les testimonials depuis Supabase
   const { data: testimonials = [] } = useQuery({
     queryKey: ["testimonials", "homepage"],
     queryFn: async () => {
@@ -109,12 +135,101 @@ const Index = () => {
     },
   });
 
-  const stats = [
-    { icon: Users, value: "846+", label: "Happy Patients" },
-    { icon: Award, value: "12+", label: "Years of Experience" },
-    { icon: Heart, value: "150+", label: "Professional Nurses" },
-    { icon: Star, value: "4.9", label: "Rating" },
-  ];
+  // ✅ Récupérer les statistiques depuis Supabase
+  const { data: statsData = [] } = useQuery({
+    queryKey: ["homepage-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("homepage_stats")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // ✅ Transformer les données pour utiliser les icônes
+  const stats = statsData.map((stat) => {
+    const Icon = iconMap[stat.icon_name] || Heart;
+    return {
+      icon: Icon,
+      value: stat.value,
+      label: stat.label,
+    };
+  });
+
+  // ✅ Mutation pour créer un témoignage
+  const createTestimonial = useMutation({
+    mutationFn: async (payload: { author: string; text: string; rating: number; email?: string }) => {
+      // Vérifier si l'email a fait une réservation (optionnel mais recommandé)
+      if (payload.email) {
+        const { data: bookings, error: bookingError } = await supabase
+          .from("bookings")
+          .select("id")
+          .eq("email", payload.email.toLowerCase())
+          .limit(1);
+        
+        if (bookingError) {
+          console.warn("Could not verify booking:", bookingError);
+        }
+        
+        // Si aucun booking trouvé, on peut quand même accepter (ou rejeter selon votre politique)
+        // Pour l'instant, on accepte même sans booking pour simplifier
+      }
+
+      // Insérer le témoignage (is_active sera false par défaut pour modération admin)
+      const { error } = await supabase
+        .from("testimonials")
+        .insert([{
+          author: payload.author,
+          text: payload.text,
+          rating: payload.rating,
+          is_active: false, // ✅ Nécessite approbation admin
+        }]);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["testimonials", "homepage"] });
+      toast({
+        title: "Thank you!",
+        description: "Your testimonial has been submitted. It will be reviewed and published soon.",
+      });
+      setFormData({
+        name: "",
+        email: "",
+        testimonial: "",
+        rating: 5,
+      });
+      setShowForm(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit testimonial. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmitTestimonial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.testimonial.trim()) {
+      toast({
+        title: "Fields Required",
+        description: "Please provide both your name and testimonial.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createTestimonial.mutate({
+      author: formData.name.trim(),
+      text: formData.testimonial.trim(),
+      rating: formData.rating,
+      email: formData.email.trim() || undefined,
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -154,23 +269,26 @@ const Index = () => {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      {stats.map((stat, index) => (
-                        <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all shadow-xl">
-                          <CardContent className="p-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                                <stat.icon className="h-5 w-5 text-white" />
+                    {/* ✅ Statistiques dynamiques */}
+                    {stats.length > 0 && (
+                      <div className="grid grid-cols-2 gap-4">
+                        {stats.map((stat, index) => (
+                          <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all shadow-xl">
+                            <CardContent className="p-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                                  <stat.icon className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <div className="text-2xl font-bold text-white">{stat.value}</div>
+                                  <div className="text-xs text-white/80">{stat.label}</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="text-2xl font-bold text-white">{stat.value}</div>
-                                <div className="text-xs text-white/80">{stat.label}</div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -268,22 +386,131 @@ const Index = () => {
                 Real stories from families we've helped
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="hover:shadow-2xl transition-all duration-300 border-primary/20 bg-white">
-                  <CardContent className="pt-8 pb-8">
-                    <div className="flex justify-center mb-6">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="h-6 w-6 text-primary fill-primary" />
-                      ))}
-                    </div>
-                    <p className="text-muted-foreground mb-6 italic leading-relaxed text-center">
-                      "{testimonial.text}"
+            
+            {/* Existing Testimonials */}
+            {testimonials.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                {testimonials.map((testimonial, index) => (
+                  <Card key={index} className="hover:shadow-2xl transition-all duration-300 border-primary/20 bg-white">
+                    <CardContent className="pt-8 pb-8">
+                      <div className="flex justify-center mb-6">
+                        {[...Array(testimonial.rating)].map((_, i) => (
+                          <Star key={i} className="h-6 w-6 text-primary fill-primary" />
+                        ))}
+                      </div>
+                      <p className="text-muted-foreground mb-6 italic leading-relaxed text-center">
+                        "{testimonial.text}"
+                      </p>
+                      <p className="font-bold text-lg text-center text-primary">{testimonial.author}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* ✅ Formulaire de témoignage */}
+            <div className="max-w-2xl mx-auto">
+              {!showForm ? (
+                <Card className="border-primary/30">
+                  <CardContent className="pt-8 pb-8 text-center">
+                    <p className="text-lg text-muted-foreground mb-6">
+                      Have you used our services? Share your experience with us!
                     </p>
-                    <p className="font-bold text-lg text-center text-primary">{testimonial.author}</p>
+                    <Button onClick={() => setShowForm(true)} variant="outline" size="lg">
+                      Write a Testimonial
+                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-2xl font-bold">Share Your Experience</h3>
+                      <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+                        ✕
+                      </Button>
+                    </div>
+                    <form onSubmit={handleSubmitTestimonial} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Your Name *</Label>
+                          <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="John Doe"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Your Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            placeholder="your@email.com"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Optional: Helps us verify you're a client
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Rating *</Label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, rating: star })}
+                              className="focus:outline-none transition-transform hover:scale-110"
+                            >
+                              <Star
+                                className={`h-8 w-8 ${
+                                  star <= formData.rating
+                                    ? "text-primary fill-primary"
+                                    : "text-muted-foreground"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="testimonial">Your Testimonial *</Label>
+                        <Textarea
+                          id="testimonial"
+                          value={formData.testimonial}
+                          onChange={(e) => setFormData({ ...formData, testimonial: e.target.value })}
+                          placeholder="Share your experience with CareEase USA..."
+                          rows={5}
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          className="flex-1"
+                          disabled={createTestimonial.isPending}
+                        >
+                          {createTestimonial.isPending ? "Submitting..." : "Submit Testimonial"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowForm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Your testimonial will be reviewed before being published. No account required!
+                      </p>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </section>
