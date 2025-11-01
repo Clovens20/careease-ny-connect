@@ -406,6 +406,37 @@ serve(async (req) => {
 
     console.log("✅ PDF generated, size:", pdfBuffer.byteLength);
 
+    // ✅ Sauvegarder le PDF dans Supabase Storage
+    const pdfFileName = `fully-signed-contracts/${contractId}.pdf`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contracts')
+      .upload(pdfFileName, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: true // Remplace si existe déjà
+      });
+
+    let pdfUrl = null;
+    if (!uploadError && uploadData) {
+      // Obtenir l'URL publique
+      const { data: urlData } = supabase.storage
+        .from('contracts')
+        .getPublicUrl(pdfFileName);
+      
+      pdfUrl = urlData?.publicUrl || null;
+      
+      if (pdfUrl) {
+        // Mettre à jour la colonne contract_pdf_url dans la table contracts
+        await supabase
+          .from('contracts')
+          .update({ contract_pdf_url: pdfUrl })
+          .eq('id', contractId);
+        
+        console.log("✅ PDF saved to Storage:", pdfUrl);
+      }
+    } else {
+      console.warn("⚠️ Could not save PDF to Storage:", uploadError?.message);
+    }
+
     const pdfBase64 = btoa(String.fromCharCode(...pdfBuffer));
 
     console.log("✅ PDF base64 encoded, length:", pdfBase64.length);

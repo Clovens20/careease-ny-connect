@@ -311,6 +311,20 @@ const AdminContracts = () => {
                         <img src={contract.admin_signature} alt="Admin signature" className="border rounded max-w-xs" />
                       </div>
                     )}
+
+                    {/* ✅ Bouton de téléchargement du PDF signé */}
+                    {contract.contract_pdf_url && (
+                      <div className="pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(contract.contract_pdf_url!, '_blank')}
+                          className="w-full"
+                        >
+                          📥 Télécharger le PDF signé
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
