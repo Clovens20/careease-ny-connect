@@ -382,6 +382,25 @@ function generateContractPDF(data: {
 }
 
 serve(async (req) => {
+  // Gérer CORS pour les requêtes preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    });
+  }
+
+  // En-têtes CORS pour toutes les réponses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
   try {
     const { bookingId, agentName } = await req.json();
 
@@ -538,13 +557,25 @@ serve(async (req) => {
         emailId: emailResult.data?.id,
         contractId: contract?.id 
       }),
-      { headers: { "Content-Type": "application/json" }, status: 200 }
+      { 
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders
+        }, 
+        status: 200 
+      }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Edge function error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { "Content-Type": "application/json" }, status: 500 }
+      { 
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders
+        }, 
+        status: 500 
+      }
     );
   }
 });

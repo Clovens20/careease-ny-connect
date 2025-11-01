@@ -200,8 +200,6 @@ function generateSignedContractPDF(data: {
   
   // Add client signature image
   try {
-    const clientSigImg = new Image();
-    clientSigImg.src = data.clientSignature;
     doc.addImage(data.clientSignature, 'PNG', 20, y + 5, 80, 30);
     y += 40;
   } catch (e) {
@@ -254,6 +252,25 @@ function generateSignedContractPDF(data: {
 }
 
 serve(async (req) => {
+  // Gérer CORS pour les requêtes preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    });
+  }
+
+  // En-têtes CORS pour toutes les réponses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
   try {
     const { contractId } = await req.json();
 
@@ -387,13 +404,25 @@ serve(async (req) => {
         success: true, 
         emailId: emailResult.data?.id 
       }),
-      { headers: { "Content-Type": "application/json" }, status: 200 }
+      { 
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders
+        }, 
+        status: 200 
+      }
     );
   } catch (error: any) {
     console.error("Edge function error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { headers: { "Content-Type": "application/json" }, status: 500 }
+      { 
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders
+        }, 
+        status: 500 
+      }
     );
   }
 });
