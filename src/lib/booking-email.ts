@@ -298,3 +298,43 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
     ],
   });
 }
+
+export async function sendBookingRejectionEmail(data: {
+  bookingId: string;
+  clientName: string;
+  clientEmail: string;
+  serviceName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}): Promise<void> {
+  await resend.emails.send({
+    from: 'CareEase USA <contact@careeaseusa.com>',
+    to: data.clientEmail,
+    subject: `Booking Update - ${data.serviceName} Service`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Booking Update</h2>
+        <p>Dear ${data.clientName},</p>
+        <p>We regret to inform you that your booking request has been cancelled.</p>
+        
+        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+          <h3 style="margin-top: 0; color: #dc2626;">Booking Details</h3>
+          <p><strong>Service:</strong> ${data.serviceName}</p>
+          <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
+          <p><strong>Time:</strong> ${data.startTime} - ${data.endTime}</p>
+        </div>
+        
+        <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or would like to book a different date, please don't hesitate to contact us:</p>
+        <p>Phone: 3474711520<br>Email: contact@careeaseusa.com</p>
+        
+        <p style="margin-top: 30px;">Thank you for your understanding.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+        <p style="color: #6b7280; font-size: 12px;">
+          This is an automated message. Please do not reply to this email.
+        </p>
+      </div>
+    `,
+  });
+}

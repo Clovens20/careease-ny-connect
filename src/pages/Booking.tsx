@@ -205,37 +205,39 @@ const Booking = () => {
       // ✅ CALCULER le prix TOTAL en utilisant datesToBook.length
       const totalPrice = calculateTotalPriceFromDates(datesToBook.length);
 
-      // Créer un booking pour chaque date
-      const bookingsToInsert = datesToBook.map(date => {
-        // Créer les notes avec toutes les informations
-        const notesContent = [
-          `Client: ${clientName}`,
-          `Email: ${email}`,
-          `Phone: ${phone}`,
-          `Address: ${address}`,
-          `City: ${city}`,
-          `Recipient: ${recipientName}`,
-          `Recipient Type: ${recipientType === "elderly" ? "Elderly Person" : recipientType === "disabled" ? "Disabled Person" : "Elderly and Disabled"}`,
-          `Hours per day: ${hoursPerDay}`,
-          `Total days: ${datesToBook.length}`,
-          `Total price: $${totalPrice.toFixed(2)}`
-        ].join('\n');
-        
-        return {
-          user_full_name: clientName,
-          user_email: email,
-          service_id: selectedService,
-          date: format(date, "yyyy-MM-dd"),
-          start_time: startTime,
-          end_time: endTime,
-          notes: notesContent,
-          status: "pending" as const,
-          city: city,
-        };
-      });
+      // ✅ NOUVELLE LOGIQUE: Créer UN SEUL booking
+      const notesContent = [
+        `Client: ${clientName}`,
+        `Email: ${email}`,
+        `Phone: ${phone}`,
+        `Address: ${address}`,
+        `City: ${city}`,
+        `Recipient: ${recipientName}`,
+        `Recipient Type: ${recipientType === "elderly" ? "Elderly Person" : recipientType === "disabled" ? "Disabled Person" : "Elderly and Disabled"}`,
+        `Hours per day: ${hoursPerDay}`,
+        `Total days: ${datesToBook.length}`,
+        `Total price: $${totalPrice.toFixed(2)}`
+      ].join('\n');
 
-      // ✅ Utiliser une session anonyme pour l'insertion publique
-      const { error } = await supabase.from("bookings").insert(bookingsToInsert);
+      const bookingToInsert = {
+        user_full_name: clientName,
+        user_email: email,
+        service_id: selectedService,
+        // Pour un range ou selected dates
+        date: isRangeMode && dateRangeStart ? format(dateRangeStart, "yyyy-MM-dd") : format(datesToBook[0], "yyyy-MM-dd"),
+        start_time: startTime,
+        end_time: endTime,
+        notes: notesContent,
+        status: "pending" as const,
+        city: city,
+        // ✅ AJOUTER les champs de range si mode range
+        ...(isRangeMode && dateRangeStart && dateRangeEnd ? {
+          date_range_start: format(dateRangeStart, "yyyy-MM-dd"),
+          date_range_end: format(dateRangeEnd, "yyyy-MM-dd"),
+        } : {}),
+      };
+
+      const { error } = await supabase.from("bookings").insert(bookingToInsert);
 
       if (error) {
         console.error("Supabase error:", error);
@@ -244,7 +246,7 @@ const Booking = () => {
 
       toast({
         title: "Booking Request Sent!",
-        description: `We've received your ${datesToBook.length} booking${datesToBook.length > 1 ? 's' : ''}. We'll contact you shortly with confirmation and agent assignment.`,
+        description: `We've received your booking for ${datesToBook.length} day${datesToBook.length > 1 ? 's' : ''}. We'll contact you shortly with confirmation and agent assignment.`,
       });
 
       // Reset form

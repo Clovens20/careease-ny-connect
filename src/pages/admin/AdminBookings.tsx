@@ -17,7 +17,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Calendar, Clock, User, MapPin, Phone, Mail, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { sendBookingConfirmationEmail } from '@/lib/booking-email';
+import { sendBookingConfirmationEmail, sendBookingRejectionEmail } from '@/lib/booking-email';
 
 // Helper function pour parser les notes
 const parseNotes = (notes: string | null) => {
@@ -54,7 +54,7 @@ const AdminBookings = () => {
     queryFn: async () => {
       const { data, error, count } = await supabase
         .from("bookings")
-        .select("id, user_full_name, user_email, date, start_time, end_time, status, notes, city, assigned_agent, created_at, service_id, services(name)", { count: 'exact' })
+        .select("id, user_full_name, user_email, date, start_time, end_time, status, notes, city, assigned_agent, created_at, service_id, services(name), date_range_start, date_range_end", { count: 'exact' })
         .order("created_at", { ascending: false })
         .range(page * pageSize, (page + 1) * pageSize - 1);
       if (error) throw error;
@@ -124,12 +124,26 @@ const AdminBookings = () => {
         .update({ status: "cancelled" })
         .eq("id", bookingId);
       if (error) throw error;
+
+      // ✅ AJOUTER: Envoyer l'email de rejet
+      const bookingData = bookings?.find(b => b.id === bookingId);
+      if (bookingData) {
+        const parsedNotes = parseNotes(bookingData.notes);
+        await sendBookingRejectionEmail({
+          bookingId,
+          clientName: bookingData.user_full_name,
+          clientEmail: bookingData.user_email,
+          serviceName: bookingData.services?.name || 'Service',
+          date: bookingData.date,
+          startTime: bookingData.start_time,
+          endTime: bookingData.end_time,
+        });
+      }
     },
     onSuccess: () => {
       toast({
         title: "Booking Rejected",
-        description: "The booking has been rejected successfully.",
-        variant: "default",
+        description: "The booking has been rejected and the client has been notified.",
       });
       queryClient.invalidateQueries({ queryKey: ["admin-all-bookings"] });
     },
@@ -188,7 +202,10 @@ const AdminBookings = () => {
 
   const formatDates = (booking: any) => {
     if (booking.date_range_start && booking.date_range_end) {
-      return `${format(new Date(booking.date_range_start), "MMM dd")} - ${format(new Date(booking.date_range_end), "MMM dd, yyyy")}`;
+      const start = new Date(booking.date_range_start);
+      const end = new Date(booking.date_range_end);
+      const duration = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return `${format(start, "MMM dd")} - ${format(end, "MMM dd, yyyy")} (${duration} ${duration > 1 ? 'days' : 'day'})`;
     } else if (booking.selected_dates && booking.selected_dates.length > 0) {
       return `${booking.selected_dates.length} day${booking.selected_dates.length > 1 ? "s" : ""} selected`;
     } else if (booking.date) {
