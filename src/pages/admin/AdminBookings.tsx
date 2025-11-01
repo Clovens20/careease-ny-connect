@@ -18,6 +18,15 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Calendar, Clock, User, MapPin, Phone, Mail, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { sendBookingConfirmationEmail, sendBookingRejectionEmail } from '@/lib/booking-email';
+import { Resend } from 'resend';
+import jsPDF from 'jspdf';
+
+const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
+if (!resendApiKey) {
+  console.error("VITE_RESEND_API_KEY is not defined!");
+}
+
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 // Helper function pour parser les notes
 const parseNotes = (notes: string | null) => {
@@ -79,30 +88,27 @@ const AdminBookings = () => {
       // ✅ AJOUTER: Envoyer l'email de confirmation avec tous les détails
       const bookingData = bookings?.find(b => b.id === bookingId);
       if (bookingData) {
-        try {
-          const parsedNotes = parseNotes(bookingData.notes);
-          console.log("Sending email to:", bookingData.user_email);
-          await sendBookingConfirmationEmail({
-            bookingId,
-            clientName: bookingData.user_full_name,
-            clientEmail: bookingData.user_email,
-            serviceName: bookingData.services?.name || 'Service',
-            date: bookingData.date,
-            startTime: bookingData.start_time,
-            endTime: bookingData.end_time,
-            agentName,
-            notes: bookingData.notes || '',
-            city: bookingData.city || undefined,
-            // ✅ NOUVEAUX CHAMPS
-            clientPhone: parsedNotes.phone || undefined,
-            clientAddress: parsedNotes.address || undefined,
-            totalPrice: parsedNotes.totalPrice || undefined,
-          });
-          console.log("Email sent successfully");
-        } catch (emailError) {
-          console.error("Email error:", emailError);
-          // Continue même si l'email échoue
-        }
+        const parsedNotes = parseNotes(bookingData.notes);
+        console.log("Sending email to:", bookingData.user_email);
+        await sendBookingConfirmationEmail({
+          bookingId,
+          clientName: bookingData.user_full_name,
+          clientEmail: bookingData.user_email,
+          serviceName: bookingData.services?.name || 'Service',
+          date: bookingData.date,
+          startTime: bookingData.start_time,
+          endTime: bookingData.end_time,
+          agentName,
+          notes: bookingData.notes || '',
+          city: bookingData.city || undefined,
+          // ✅ NOUVEAUX CHAMPS
+          clientPhone: parsedNotes.phone || undefined,
+          clientAddress: parsedNotes.address || undefined,
+          totalPrice: parsedNotes.totalPrice || undefined,
+        });
+      } else {
+        console.error("Booking data not found for ID:", bookingId);
+        throw new Error("Booking data not found");
       }
     },
     onSuccess: () => {

@@ -1,7 +1,12 @@
 import { Resend } from 'resend';
 import jsPDF from 'jspdf';
 
-const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
+const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
+if (!resendApiKey) {
+  console.error("VITE_RESEND_API_KEY is not defined!");
+}
+
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 export interface BookingEmailData {
   bookingId: string;
@@ -254,14 +259,30 @@ export async function generateBookingContract(data: BookingEmailData): Promise<U
 }
 
 export async function sendBookingConfirmationEmail(data: BookingEmailData): Promise<void> {
+  if (!resend) {
+    const errorMsg = "Resend API key is not configured. Please set VITE_RESEND_API_KEY in your environment variables.";
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+
   try {
+    console.log("=== EMAIL DEBUG START ===");
     console.log("Generating PDF for booking:", data.bookingId);
+    console.log("Client email:", data.clientEmail);
+    console.log("Client name:", data.clientName);
+    
     const pdfBuffer = await generateBookingContract(data);
+    console.log("PDF generated, size:", pdfBuffer.byteLength);
+    
     const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+    console.log("PDF base64 length:", pdfBase64.length);
     
     console.log("Sending email to:", data.clientEmail);
+    console.log("Resend API Key present:", !!resendApiKey);
+    console.log("From address: onboarding@resend.dev");
+    
     const result = await resend.emails.send({
-      from: 'CareEase USA <contact@careeaseusa.com>',
+      from: 'onboarding@resend.dev',
       to: data.clientEmail,
       subject: `Your ${data.serviceName} Service is Confirmed`,
       html: `
@@ -299,9 +320,21 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
       ],
     });
     
-    console.log("Email sent successfully:", result);
-  } catch (error) {
+    console.log("=== EMAIL RESULT ===");
+    console.log("Full result:", JSON.stringify(result, null, 2));
+    console.log("Email ID:", result.data?.id);
+    console.log("=== EMAIL DEBUG END ===");
+    
+    if (!result.data?.id) {
+      throw new Error("Email sending failed: No email ID returned. Result: " + JSON.stringify(result));
+    }
+  } catch (error: any) {
+    console.error("=== EMAIL ERROR ===");
     console.error("Error sending email:", error);
+    console.error("Error message:", error?.message);
+    console.error("Error response:", error?.response);
+    console.error("Full error:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error("=== EMAIL ERROR END ===");
     throw error;
   }
 }
@@ -315,33 +348,44 @@ export async function sendBookingRejectionEmail(data: {
   startTime: string;
   endTime: string;
 }): Promise<void> {
-  await resend.emails.send({
-    from: 'CareEase USA <contact@careeaseusa.com>',
-    to: data.clientEmail,
-    subject: `Booking Update - ${data.serviceName} Service`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc2626;">Booking Update</h2>
-        <p>Dear ${data.clientName},</p>
-        <p>We regret to inform you that your booking request has been cancelled.</p>
-        
-        <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
-          <h3 style="margin-top: 0; color: #dc2626;">Booking Details</h3>
-          <p><strong>Service:</strong> ${data.serviceName}</p>
-          <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
-          <p><strong>Time:</strong> ${data.startTime} - ${data.endTime}</p>
+  if (!resend) {
+    console.error("Resend API key is not configured. Cannot send rejection email.");
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: 'CareEase USA <contact@careeaseusa.com>',
+      to: data.clientEmail,
+      subject: `Booking Update - ${data.serviceName} Service`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Booking Update</h2>
+          <p>Dear ${data.clientName},</p>
+          <p>We regret to inform you that your booking request has been cancelled.</p>
+          
+          <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+            <h3 style="margin-top: 0; color: #dc2626;">Booking Details</h3>
+            <p><strong>Service:</strong> ${data.serviceName}</p>
+            <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
+            <p><strong>Time:</strong> ${data.startTime} - ${data.endTime}</p>
+          </div>
+          
+          <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or would like to book a different date, please don't hesitate to contact us:</p>
+          <p>Phone: 3474711520<br>Email: contact@careeaseusa.com</p>
+          
+          <p style="margin-top: 30px;">Thank you for your understanding.</p>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 12px;">
+            This is an automated message. Please do not reply to this email.
+          </p>
         </div>
-        
-        <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or would like to book a different date, please don't hesitate to contact us:</p>
-        <p>Phone: 3474711520<br>Email: contact@careeaseusa.com</p>
-        
-        <p style="margin-top: 30px;">Thank you for your understanding.</p>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        <p style="color: #6b7280; font-size: 12px;">
-          This is an automated message. Please do not reply to this email.
-        </p>
-      </div>
-    `,
-  });
+      `,
+    });
+    console.log("Rejection email sent successfully.");
+  } catch (error: any) {
+    console.error("Error sending rejection email:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
+  }
 }
