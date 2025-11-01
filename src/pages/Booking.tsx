@@ -18,11 +18,37 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
+type ServiceRow = {
+  id: string;
+  name?: string | null;
+  price_hourly?: number | null;
+  price_daily?: number | null;
+  title?: string | null;
+  hourly_rate?: number | null;
+  daily_rate?: number | null;
+  description?: string | null;
+  is_active?: boolean | null;
+};
+
+const AVAILABLE_CITIES = [
+  "Freeport",
+  "Baldwin",
+  "Oceanside",
+  "Rockville Centre",
+  "Lynbrook",
+  "Hempstead",
+  "Uniondale",
+  "Garden City",
+  "Roosevelt",
+  "Long Beach",
+  "Massapequa",
+];
+
 const Booking = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
-  
+
   // Service & Date Selection
   const [selectedService, setSelectedService] = useState(searchParams.get("service") || "");
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -30,7 +56,7 @@ const Booking = () => {
   const [dateRangeEnd, setDateRangeEnd] = useState<Date>();
   const [isRangeMode, setIsRangeMode] = useState(false);
   const [hoursPerDay, setHoursPerDay] = useState("4");
-  
+
   // Client Information
   const [clientName, setClientName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,41 +64,39 @@ const Booking = () => {
   const [address, setAddress] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientType, setRecipientType] = useState("");
-  
+  const [city, setCity] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: services, isLoading } = useQuery({
-    queryKey: ["services"],
+    queryKey: ["services", "active", "booking"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, description, price_hourly, price_daily, is_active")
+        .select("*")
         .eq("is_active", true)
-        .order("name");
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Array<{
-        id: string;
-        name: string;
-        description: string | null;
-        price_hourly: number | null;
-        price_daily: number | null;
-        is_active: boolean | null;
-      }>;
+      return (data ?? []) as ServiceRow[];
     },
   });
+
+  // Helpers pour supporter les deux schémas
+  const getServiceName = (s?: ServiceRow) => (s?.name ?? s?.title ?? "");
+  const getHourly = (s?: ServiceRow) => (s?.price_hourly ?? s?.hourly_rate ?? 0);
 
   const selectedServiceData = services?.find((s) => s.id === selectedService);
 
   const calculateTotalPrice = () => {
     if (!selectedServiceData) return 0;
-    const hours = parseInt(hoursPerDay);
-    const pricePerDay = (selectedServiceData.price_hourly || 0) * hours;
-    
+    const hours = parseInt(hoursPerDay || "0", 10) || 0;
+    const pricePerDay = (getHourly(selectedServiceData) || 0) * hours;
+
     if (isRangeMode && dateRangeStart && dateRangeEnd) {
       const days = Math.ceil((dateRangeEnd.getTime() - dateRangeStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       return pricePerDay * days;
     }
-    
+
     return pricePerDay * selectedDates.length;
   };
 
@@ -85,7 +109,7 @@ const Booking = () => {
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
-    
+
     if (isRangeMode) {
       if (!dateRangeStart) {
         setDateRangeStart(date);
@@ -111,43 +135,116 @@ const Booking = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (selectedDates.length === 0 && (!dateRangeStart || !dateRangeEnd)) {
-      toast({
-        title: "Dates Required",
-        description: "Please select at least one date or a date range.",
-        variant: "destructive",
-      });
-      return;
+  // Helper pour générer les dates dans un range
+  const getDatesInRange = (start: Date, end: Date): Date[] => {
+    const dates: Date[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
     }
+    return dates;
+  };
 
-    setIsSubmitting(true);
+  const calculateTotalPriceFromDates = (numDates: number) => {
+    if (!selectedServiceData) return 0;
+    const hours = parseInt(hoursPerDay || "0", 10) || 0;
+    const pricePerDay = (getHourly(selectedServiceData) || 0) * hours;
+    return pricePerDay * numDates;
+  };
 
+  const handleSubmit = async () => {
     try {
-      const { error } = await supabase.from("bookings").insert({
-        service_id: selectedService,
-        client_name: clientName,
-        email: email,
-        phone: phone,
-        address: address,
-        date: isRangeMode ? (dateRangeStart ? format(dateRangeStart, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")) : (selectedDates[0] ? format(selectedDates[0], "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")),
-        start_time: "09:00",
-        duration_hours: parseInt(hoursPerDay),
-        recipient_name: recipientName,
-        recipient_type: recipientType as "elderly" | "disabled" | "both",
-        date_range_start: isRangeMode ? (dateRangeStart ? format(dateRangeStart, "yyyy-MM-dd") : null) : (selectedDates[0] ? format(selectedDates[0], "yyyy-MM-dd") : null),
-        date_range_end: isRangeMode ? (dateRangeEnd ? format(dateRangeEnd, "yyyy-MM-dd") : null) : null,
-        selected_dates: isRangeMode ? null : selectedDates.map(d => format(d, "yyyy-MM-dd")),
-        hours_per_day: parseInt(hoursPerDay),
-        total_price: calculateTotalPrice(),
-        status: "pending" as "pending",
-      } as any);
+      setIsSubmitting(true);
 
-      if (error) throw error;
+      // 🔐 Vérifier l'authentification (optionnel - décommentez si nécessaire)
+      // const { data: { user } } = await supabase.auth.getUser();
+      // if (!user) {
+      //   toast({
+      //     title: "Authentication Required",
+      //     description: "Please sign in to make a booking.",
+      //     variant: "destructive",
+      //   });
+      //   setIsSubmitting(false);
+      //   return;
+      // }
+
+      // Vérifier que la ville a été sélectionnée
+      if (!city) {
+        toast({
+          title: "City Required",
+          description: "Please select your city before confirming the booking.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Calculer end_time basé sur start_time + duration
+      const startTime = "09:00";
+      const hours = parseInt(hoursPerDay || "0", 10);
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const endHour = startHour + hours;
+      const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
+
+      // Obtenir toutes les dates à réserver
+      const datesToBook: Date[] = isRangeMode && dateRangeStart && dateRangeEnd
+        ? getDatesInRange(dateRangeStart, dateRangeEnd)
+        : selectedDates;
+
+      if (datesToBook.length === 0) {
+        toast({
+          title: "Date Required",
+          description: "Please select at least one date.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // ✅ CALCULER le prix TOTAL en utilisant datesToBook.length
+      const totalPrice = calculateTotalPriceFromDates(datesToBook.length);
+
+      // Créer un booking pour chaque date
+      const bookingsToInsert = datesToBook.map(date => {
+        // Créer les notes avec toutes les informations
+        const notesContent = [
+          `Client: ${clientName}`,
+          `Email: ${email}`,
+          `Phone: ${phone}`,
+          `Address: ${address}`,
+          `City: ${city}`,
+          `Recipient: ${recipientName}`,
+          `Recipient Type: ${recipientType === "elderly" ? "Elderly Person" : recipientType === "disabled" ? "Disabled Person" : "Elderly and Disabled"}`,
+          `Hours per day: ${hoursPerDay}`,
+          `Total days: ${datesToBook.length}`,
+          `Total price: $${totalPrice.toFixed(2)}`
+        ].join('\n');
+        
+        return {
+          user_full_name: clientName,
+          user_email: email,
+          service_id: selectedService,
+          date: format(date, "yyyy-MM-dd"),
+          start_time: startTime,
+          end_time: endTime,
+          notes: notesContent,
+          status: "pending" as const,
+          city: city,
+        };
+      });
+
+      // ✅ Utiliser une session anonyme pour l'insertion publique
+      const { error } = await supabase.from("bookings").insert(bookingsToInsert);
+
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
 
       toast({
         title: "Booking Request Sent!",
-        description: "We've received your booking request. We'll contact you shortly with confirmation and agent assignment.",
+        description: `We've received your ${datesToBook.length} booking${datesToBook.length > 1 ? 's' : ''}. We'll contact you shortly with confirmation and agent assignment.`,
       });
 
       // Reset form
@@ -164,10 +261,12 @@ const Booking = () => {
       setAddress("");
       setRecipientName("");
       setRecipientType("");
-    } catch (error) {
+      setCity("");
+    } catch (error: any) {
+      console.error("Error details:", error);
       toast({
         title: "Error",
-        description: "Failed to create booking. Please try again.",
+        description: error?.message || "Failed to create booking. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -192,10 +291,10 @@ const Booking = () => {
       });
       return;
     }
-    if (step === 3 && (!clientName || !email || !phone || !address || !recipientName || !recipientType)) {
+    if (step === 3 && (!clientName || !email || !phone || !address || !recipientName || !recipientType || !city)) {
       toast({
         title: "Information Required",
-        description: "Please fill in all fields to continue.",
+        description: "Please fill in all fields to continue, including your city.",
         variant: "destructive",
       });
       return;
@@ -268,28 +367,35 @@ const Booking = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {services?.map((service) => (
-                        <div
-                          key={service.id}
-                          onClick={() => setSelectedService(service.id)}
-                          className={cn(
-                            "border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-xl",
-                            selectedService === service.id
-                              ? "border-primary bg-primary/10 shadow-lg scale-105"
-                              : "border-border hover:border-primary/50"
-                          )}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-xl mb-2">{service.name}</h3>
-                              <p className="text-muted-foreground">{service.description}</p>
-                            </div>
-                            <div className="text-right ml-4">
-                              <p className="font-bold text-xl text-primary">${service.price_hourly}/hr</p>
+                      {services?.map((service) => {
+                        const displayName = getServiceName(service);
+                        const displayHourly = getHourly(service);
+                        return (
+                          <div
+                            key={service.id}
+                            onClick={() => setSelectedService(service.id)}
+                            className={cn(
+                              "border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-xl",
+                              selectedService === service.id
+                                ? "border-primary bg-primary/10 shadow-lg scale-105"
+                                : "border-border hover:border-primary/50"
+                            )}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h3 className="font-bold text-xl mb-2">{displayName}</h3>
+                                <p className="text-muted-foreground">{service.description}</p>
+                              </div>
+                              <div className="text-right ml-4">
+                                <p className="font-bold text-xl text-primary">${displayHourly}/hr</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
+                      {services?.length === 0 && (
+                        <p className="text-muted-foreground">No active services available.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -392,7 +498,7 @@ const Booking = () => {
                   <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 rounded-xl border-2 border-primary/30">
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        {getDaysCount()} day{getDaysCount() > 1 ? "s" : ""} × {hoursPerDay} hour{parseInt(hoursPerDay) > 1 ? "s" : ""}/day × ${selectedServiceData?.price_hourly}/hr
+                        {getDaysCount()} day{getDaysCount() > 1 ? "s" : ""} × {hoursPerDay} hour{parseInt(hoursPerDay || "0", 10) > 1 ? "s" : ""}/day × ${getHourly(selectedServiceData)}/hr
                       </p>
                       <p className="text-2xl font-bold text-primary">Total: ${calculateTotalPrice().toFixed(2)}</p>
                     </div>
@@ -435,6 +541,23 @@ const Booking = () => {
                       className="h-12"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-base font-semibold">Select Your City</Label>
+                    <Select value={city} onValueChange={setCity}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Select your city..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AVAILABLE_CITIES.map((cityName) => (
+                          <SelectItem key={cityName} value={cityName}>
+                            {cityName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="address" className="text-base font-semibold">Service Address</Label>
                     <Textarea
@@ -446,7 +569,7 @@ const Booking = () => {
                       className="resize-none"
                     />
                   </div>
-                  
+
                   <div className="border-t pt-6 mt-6">
                     <h3 className="font-semibold text-lg mb-4">Care Recipient Information</h3>
                     <div className="space-y-4">
@@ -490,7 +613,7 @@ const Booking = () => {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center py-3 border-b">
                         <span className="text-muted-foreground font-medium">Service:</span>
-                        <span className="font-bold text-lg">{selectedServiceData?.name}</span>
+                        <span className="font-bold text-lg">{getServiceName(selectedServiceData)}</span>
                       </div>
                       <div className="flex justify-between items-center py-3 border-b">
                         <span className="text-muted-foreground font-medium">Dates:</span>
@@ -529,6 +652,10 @@ const Booking = () => {
                       <p className="flex justify-between">
                         <span className="text-muted-foreground">Phone:</span>
                         <span className="font-semibold">{phone}</span>
+                      </p>
+                      <p className="flex justify-between">
+                        <span className="text-muted-foreground">City:</span>
+                        <span className="font-semibold">{city}</span>
                       </p>
                       <p className="flex justify-between">
                         <span className="text-muted-foreground">Address:</span>

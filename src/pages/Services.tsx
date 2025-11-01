@@ -1,13 +1,31 @@
+// src/pages/Services.tsx
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Heart, Users, Utensils, Pill, Home, Car } from "lucide-react";
 
+export function useActiveServices(filter?: string | null) {
+  return useQuery({
+    queryKey: ["services", "active", filter ?? ""],
+    queryFn: async () => {
+      let q = supabase.from("services").select("*").eq("is_active", true);
+      if (filter && filter.trim() !== "") {
+        q = q.ilike("name", `%${filter}%`);
+      }
+      const { data, error } = await q.order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 const iconMap: { [key: string]: any } = {
+  "Home Health Aide (HHA)": Heart,
+  "Housekeeping": Home,
   "Personal Care": Heart,
   "Companionship": Users,
   "Meal Preparation": Utensils,
@@ -17,17 +35,9 @@ const iconMap: { [key: string]: any } = {
 };
 
 const Services = () => {
-  const { data: services, isLoading } = useQuery({
-    queryKey: ["services"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("services")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
+  const [params] = useSearchParams();
+  const filter = params.get("filter");
+  const { data: services, isLoading } = useActiveServices(filter);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -86,7 +96,7 @@ const Services = () => {
                           <div className="flex justify-between items-center p-3 bg-secondary rounded-lg">
                             <span className="text-sm font-medium">Daily Rate:</span>
                             <span className="font-bold text-primary text-lg">
-                              ${service.price_daily}/day
+                              ${service.price_daily ?? "-"}{service.price_daily ? "/day" : ""}
                             </span>
                           </div>
                         </div>

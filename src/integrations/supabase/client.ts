@@ -13,5 +13,20 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+    detectSessionInUrl: true,
+    flowType: 'pkce', // ✅ Améliore la sécurité OAuth
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'careease-web-app',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // ✅ Limite les événements
+    },
+  },
 });

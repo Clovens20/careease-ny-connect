@@ -3,58 +3,111 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Heart, Users, Utensils, Pill, Home, Car, Shield, Clock, Award, Star } from "lucide-react";
+import { Heart, Users, Home, Shield, Clock, Award, Star } from "lucide-react";
 import heroImage from "@/assets/hero-careease.jpg";
+
+/* Images */
 import companionImage from "@/assets/service-companion.jpg";
-import housekeepingImage from "@/assets/service-housekeeping.jpg";
-import activitiesImage from "@/assets/service-activities.jpg";
-import personalCareImage from "@/assets/service-personal-care.jpg";
+
+import personalCareNew from "@/assets/personalCareNew.png";
+import personalCareNew1 from "@/assets/personalCareNew1.png";
+import personalCareNew2 from "@/assets/personalCareNew2.png";
+
+import hkImg1 from "@/assets/housekeepingImage1.png";
+import hkImg2 from "@/assets/housekeepingImage2.png";
+import hkImg3 from "@/assets/housekeepingImage3.png";
+import hkImg4 from "@/assets/housekeepingImage4.png";
+import hkImg5 from "@/assets/housekeepingImage5.png";
+
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  /* Images groupées par catégorie */
+  const personalCareImages = [
+    { src: personalCareNew1, alt: "Personal Care caregiver supporting senior" },
+    { src: personalCareNew, alt: "Personal Care assistance at home" },
+    { src: personalCareNew2, alt: "Personal Care home support" },
+  ];
+
+  const companionshipImages = [
+    { src: companionImage, alt: "Companionship and friendly conversation" },
+  ];
+
+  const housekeepingImages = [
+    { src: hkImg4, alt: "Window cleaning while senior is nearby" },
+    { src: hkImg1, alt: "Vacuuming near senior at home" },
+    { src: hkImg2, alt: "Dusting shelves during housekeeping" },
+    { src: hkImg3, alt: "Vacuuming living room" },
+    { src: hkImg5, alt: "Team performing housekeeping tasks" },
+  ];
+
+  /* Services à afficher (3 seulement) */
   const services = [
-    { icon: Heart, title: "Personal Care", description: "Assistance with daily living activities including bathing, dressing, and grooming", image: personalCareImage },
-    { icon: Users, title: "Companionship", description: "Friendly support and social interaction to combat loneliness", image: companionImage },
-    { icon: Utensils, title: "Meal Preparation", description: "Nutritious meal planning and preparation tailored to dietary needs", image: null },
-    { icon: Pill, title: "Medication Reminders", description: "Timely medication administration and health monitoring", image: null },
-    { icon: Home, title: "Light Housekeeping", description: "Maintaining a clean, safe, and comfortable living environment", image: housekeepingImage },
-    { icon: Car, title: "Transportation", description: "Safe transportation to appointments and activities", image: null },
+    {
+      key: "personal",
+      icon: Heart,
+      title: "Personal Care",
+      description:
+        "Daily assistance with hygiene (bathing, dressing), mobility, meals, and overall well‑being to help maintain independence at home.",
+      cover: personalCareNew1,
+      gallery: personalCareImages,
+    },
+    {
+      key: "companionship",
+      icon: Users,
+      title: "Companionship",
+      description:
+        "Friendly presence, conversation, and accompaniment to activities that reduce isolation and encourage social engagement.",
+      cover: companionImage,
+      gallery: companionshipImages,
+    },
+    {
+      key: "housekeeping",
+      icon: Home,
+      title: "Light Housekeeping",
+      description:
+        "Light cleaning (dusting, floors), tidying, laundry, and routine home upkeep to ensure a clean and comfortable environment.",
+      cover: hkImg4,
+      gallery: housekeepingImages,
+    },
   ];
 
   const reasons = [
     {
       icon: Shield,
       title: "Licensed & Insured",
-      description: "All our caregivers are fully licensed, insured, and background-checked for your peace of mind.",
+      description:
+        "All our caregivers are fully licensed, insured, and background‑checked for your peace of mind.",
     },
     {
       icon: Clock,
       title: "24/7 Availability",
-      description: "Flexible scheduling with hourly or daily rates to fit your unique needs and budget.",
+      description:
+        "Flexible scheduling with hourly or daily rates to fit your unique needs and budget.",
     },
     {
       icon: Award,
       title: "Experienced Team",
-      description: "Years of expertise providing compassionate, professional care to families across New York.",
+      description:
+        "Years of expertise providing compassionate, professional care to families across New York.",
     },
   ];
 
-  const testimonials = [
-    {
-      author: "Maria S.",
-      text: "CareEase NY has been a blessing for our family. Their caregivers are professional, kind, and truly care about my mother's well-being.",
-      rating: 5,
+  // ✅ REMPLACER les testimonials hardcodés par une query Supabase
+  const { data: testimonials = [] } = useQuery({
+    queryKey: ["testimonials", "homepage"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("testimonials")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return data ?? [];
     },
-    {
-      author: "John D.",
-      text: "The flexibility and quality of service is outstanding. They've made it possible for my father to continue living independently at home.",
-      rating: 5,
-    },
-    {
-      author: "Sarah L.",
-      text: "From the first consultation to ongoing care, the team has been exceptional. Highly recommend their services!",
-      rating: 5,
-    },
-  ];
+  });
 
   const stats = [
     { icon: Users, value: "846+", label: "Happy Patients" },
@@ -69,21 +122,19 @@ const Index = () => {
       <main className="flex-1">
         {/* Hero Section with Image Background */}
         <section className="relative py-0 overflow-hidden">
-          {/* Hero Image with Overlay */}
           <div className="relative h-[600px] md:h-[700px]">
             <div className="absolute inset-0">
-              <img 
-                src={heroImage} 
-                alt="CareEase USA - Professional Home Health Care for Elderly and Disabled" 
+              <img
+                src={heroImage}
+                alt="CareEase USA - Professional Home Health Care for Elderly and Disabled"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-transparent"></div>
             </div>
-            
+
             <div className="container mx-auto px-4 relative z-10 h-full">
               <div className="max-w-6xl mx-auto h-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center h-full">
-                  {/* Left side: Text and CTA */}
                   <div className="text-white py-16">
                     <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
                       Your well-being, our daily priority
@@ -95,12 +146,14 @@ const Index = () => {
                       <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-xl">
                         <Link to="/booking">Book Now</Link>
                       </Button>
-                      <Button size="lg" variant="outline" asChild className="border-2 border-white text-white hover:bg-white/10 backdrop-blur-sm">
-                        <Link to="/services">Our Services</Link>
+                      <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-xl">
+                        <Link to="/services?filter=Home%20Health%20Aide%20(HHA)">Home Health Aide (HHA)</Link>
+                      </Button>
+                      <Button size="lg" variant="secondary" asChild className="bg-white text-primary hover:bg-white/90 shadow-xl">
+                        <Link to="/services?filter=Housekeeping">Housekeeping</Link>
                       </Button>
                     </div>
-                    
-                    {/* Stats Cards */}
+
                     <div className="grid grid-cols-2 gap-4">
                       {stats.map((stat, index) => (
                         <Card key={index} className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/20 transition-all shadow-xl">
@@ -125,45 +178,54 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Services Section */}
+        {/* Services Section (3 services + galeries associées) */}
         <section className="py-16 md:py-24 bg-gradient-to-b from-background to-secondary/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-5xl font-bold mb-4">Our Services</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Specialized home health aide services for elderly and disabled individuals
+                Personalized home care services focused on dignity, comfort, and independence.
               </p>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {services.map((service, index) => (
-                <Card 
-                  key={index} 
-                  className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 shadow-lg"
-                >
-                  {service.image && (
-                    <div className="relative h-48 overflow-hidden">
-                      <img 
-                        src={service.image} 
-                        alt={service.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    </div>
-                  )}
+              {services.map((service) => (
+                <Card key={service.key} className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-0 shadow-lg">
+                  <figure className="relative h-48 overflow-hidden">
+                    <img
+                      src={service.cover}
+                      alt={service.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <figcaption className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs md:text-sm px-3 py-2">
+                      {service.title}
+                    </figcaption>
+                  </figure>
                   <CardContent className="pt-6 pb-6">
                     <div className="h-14 w-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
                       <service.icon className="h-7 w-7 text-primary group-hover:text-white transition-colors" />
                     </div>
-                    <h3 className="font-semibold text-xl mb-3 text-foreground">
-                      {service.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {service.description}
-                    </p>
+                    <h3 className="font-semibold text-xl mb-3 text-foreground">{service.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4">{service.description}</p>
+
+                    {/* Mini-galerie associée à la catégorie */}
+                    {service.gallery?.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {service.gallery.map((img, idx) => (
+                          <img
+                            key={idx}
+                            src={img.src}
+                            alt={img.alt}
+                            className="w-full h-24 object-cover rounded-md hover:scale-105 transition-transform duration-300"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
+
             <div className="text-center mt-12">
               <Button size="lg" asChild className="shadow-lg">
                 <Link to="/services">View All Services</Link>

@@ -16,7 +16,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Calendar, Clock, User, MapPin, Phone, Mail } from "lucide-react";
+import { CheckCircle, Calendar, Clock, User, MapPin, Phone, Mail, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { sendBookingConfirmationEmail } from '@/lib/booking-email';
+
+// Helper function pour parser les notes
+const parseNotes = (notes: string | null) => {
+  if (!notes) return { phone: '', address: '', hoursPerDay: '', recipientName: '', recipientType: '', totalPrice: '' };
+  
+  const phoneMatch = notes.match(/Phone:\s*(.+)/);
+  const addressMatch = notes.match(/Address:\s*(.+)/);
+  const hoursMatch = notes.match(/Hours per day:\s*(.+)/);
+  const recipientMatch = notes.match(/Recipient:\s*(.+)/);
+  const recipientTypeMatch = notes.match(/Recipient Type:\s*(.+)/);
+  const totalPriceMatch = notes.match(/Total price:\s*(.+)/);
+  
+  return {
+    phone: phoneMatch ? phoneMatch[1].split('\n')[0].trim() : '',
+    address: addressMatch ? addressMatch[1].split('\n')[0].trim() : '',
+    hoursPerDay: hoursMatch ? hoursMatch[1].split('\n')[0].trim() : '',
+    recipientName: recipientMatch ? recipientMatch[1].split('\n')[0].trim() : '',
+    recipientType: recipientTypeMatch ? recipientTypeMatch[1].split('\n')[0].trim() : '',
+    totalPrice: totalPriceMatch ? totalPriceMatch[1].split('\n')[0].trim() : '',
+  };
+};
 
 const AdminBookings = () => {
   const { toast } = useToast();
@@ -24,18 +46,24 @@ const AdminBookings = () => {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [agentName, setAgentName] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
 
-  const { data: bookings } = useQuery({
-    queryKey: ["admin-all-bookings"],
+  const { data: bookingsData, isLoading } = useQuery({
+    queryKey: ["admin-all-bookings", page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("bookings")
-        .select("*, services(name)")
-        .order("created_at", { ascending: false });
+        .select("id, user_full_name, user_email, date, start_time, end_time, status, notes, city, assigned_agent, created_at, service_id, services(name)", { count: 'exact' })
+        .order("created_at", { ascending: false })
+        .range(page * pageSize, (page + 1) * pageSize - 1);
       if (error) throw error;
-      return data;
+      return { data, count };
     },
   });
+
+  const totalPages = bookingsData?.count ? Math.ceil(bookingsData.count / pageSize) : 0;
+  const bookings = bookingsData?.data || [];
 
   const assignAgentMutation = useMutation({
     mutationFn: async ({ bookingId, agentName }: { bookingId: string; agentName: string }) => {
@@ -44,9 +72,31 @@ const AdminBookings = () => {
         .update({
           assigned_agent: agentName,
           status: "confirmed",
-        } as any)
+        })
         .eq("id", bookingId);
       if (error) throw error;
+
+      // ✅ AJOUTER: Envoyer l'email de confirmation avec tous les détails
+      const bookingData = bookings?.find(b => b.id === bookingId);
+      if (bookingData) {
+        const parsedNotes = parseNotes(bookingData.notes);
+        await sendBookingConfirmationEmail({
+          bookingId,
+          clientName: bookingData.user_full_name,
+          clientEmail: bookingData.user_email,
+          serviceName: bookingData.services?.name || 'Service',
+          date: bookingData.date,
+          startTime: bookingData.start_time,
+          endTime: bookingData.end_time,
+          agentName,
+          notes: bookingData.notes || '',
+          city: bookingData.city || undefined,
+          // ✅ NOUVEAUX CHAMPS
+          clientPhone: parsedNotes.phone || undefined,
+          clientAddress: parsedNotes.address || undefined,
+          totalPrice: parsedNotes.totalPrice || undefined,
+        });
+      }
     },
     onSuccess: () => {
       toast({
@@ -66,6 +116,35 @@ const AdminBookings = () => {
       });
     },
   });
+
+  const rejectBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled" })
+        .eq("id", bookingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Rejected",
+        description: "The booking has been rejected successfully.",
+        variant: "default",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-all-bookings"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reject booking. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRejectBooking = (bookingId: string) => {
+    rejectBookingMutation.mutate(bookingId);
+  };
 
   const handleAssignAgent = (booking: any) => {
     setSelectedBooking(booking);
@@ -100,6 +179,13 @@ const AdminBookings = () => {
     }
   };
 
+  const calculateEndTime = (startTime: string, durationHours: number) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endTime = new Date();
+    endTime.setHours(hours + durationHours, minutes, 0, 0);
+    return `${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}`;
+  };
+
   const formatDates = (booking: any) => {
     if (booking.date_range_start && booking.date_range_end) {
       return `${format(new Date(booking.date_range_start), "MMM dd")} - ${format(new Date(booking.date_range_end), "MMM dd, yyyy")}`;
@@ -115,7 +201,13 @@ const AdminBookings = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Bookings Management</h1>
       <div className="grid gap-4">
-        {bookings?.map((booking: any) => (
+        {isLoading && (
+          <Card className="p-12 text-center">
+            <p className="text-muted-foreground text-lg">Loading bookings...</p>
+          </Card>
+        )}
+
+        {!isLoading && bookings?.map((booking: any) => (
           <Card key={booking.id} className="p-6 hover:shadow-lg transition-shadow">
             <div className="space-y-4">
               {/* Header: Service and Status */}
@@ -135,10 +227,16 @@ const AdminBookings = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-2xl text-primary">${Number(booking.total_price).toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {booking.hours_per_day ? `${booking.hours_per_day} hrs/day` : ""}
-                  </p>
+                  {booking.hours_per_day && (
+                    <p className="text-sm text-muted-foreground">
+                      {booking.hours_per_day} hrs/day
+                    </p>
+                  )}
+                  {booking.start_time && booking.duration_hours && (
+                    <p className="text-sm text-muted-foreground">
+                      {booking.start_time} - {calculateEndTime(booking.start_time, booking.duration_hours)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -149,38 +247,49 @@ const AdminBookings = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{booking.client_name}</span>
+                      <span className="font-medium">{booking.user_full_name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{booking.email}</span>
+                      <span>{booking.user_email}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{booking.phone}</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <span>{booking.address}</span>
-                    </div>
+                    {(() => {
+                      const parsed = parseNotes(booking.notes);
+                      return (
+                        <>
+                          {parsed.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              <span>{parsed.phone}</span>
+                            </div>
+                          )}
+                          {parsed.address && (
+                            <div className="flex items-start gap-2 text-sm">
+                              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                              <span>{parsed.address}</span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
                 {/* Care Recipient Information */}
-                {booking.recipient_name && (
+                {parseNotes(booking.notes).recipientName && (
                   <div className="space-y-2">
                     <h4 className="font-semibold text-sm text-muted-foreground uppercase">Care Recipient</h4>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{booking.recipient_name}</span>
+                        <span className="font-medium">{parseNotes(booking.notes).recipientName}</span>
                       </div>
-                      {booking.recipient_type && (
+                      {parseNotes(booking.notes).recipientType && (
                         <div className="text-sm">
                           <Badge variant="secondary">
-                            {booking.recipient_type === "elderly" && "Elderly"}
-                            {booking.recipient_type === "disabled" && "Disabled"}
-                            {booking.recipient_type === "both" && "Elderly & Disabled"}
+                            {parseNotes(booking.notes).recipientType === "elderly" && "Elderly"}
+                            {parseNotes(booking.notes).recipientType === "disabled" && "Disabled"}
+                            {parseNotes(booking.notes).recipientType === "both" && "Elderly & Disabled"}
                           </Badge>
                         </div>
                       )}
@@ -201,27 +310,28 @@ const AdminBookings = () => {
                     </>
                   )}
                 </div>
-                {booking.selected_dates && booking.selected_dates.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {booking.selected_dates.map((date: string, index: number) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {format(new Date(date), "MMM dd, yyyy")}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Action Button */}
               {booking.status === "pending" && (
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t flex gap-2">
                   <Button
                     onClick={() => handleAssignAgent(booking)}
-                    className="w-full md:w-auto"
+                    className="flex-1 md:flex-none"
                     size="lg"
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Accept & Assign Agent
+                  </Button>
+                  <Button
+                    onClick={() => handleRejectBooking(booking.id)}
+                    variant="destructive"
+                    className="flex-1 md:flex-none"
+                    size="lg"
+                    disabled={rejectBookingMutation.isPending}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Reject
                   </Button>
                 </div>
               )}
@@ -229,45 +339,191 @@ const AdminBookings = () => {
           </Card>
         ))}
 
-        {bookings?.length === 0 && (
+        {!isLoading && bookings?.length === 0 && (
           <Card className="p-12 text-center">
             <p className="text-muted-foreground text-lg">No bookings yet.</p>
           </Card>
         )}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
+          <div className="text-sm text-muted-foreground">
+            Page {page + 1} of {totalPages} ({bookingsData?.count || 0} total bookings)
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0 || isLoading}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1 || isLoading}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Assign Agent Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Assign Agent to Booking</DialogTitle>
             <DialogDescription>
-              Enter the name of the agent who will handle this booking. The client will be notified with the agent's details.
+              Review all booking details and assign an agent. The client will be notified.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {selectedBooking && (
-              <div className="space-y-2 p-4 bg-secondary rounded-lg">
-                <p className="text-sm font-medium">
-                  Client: <span className="font-bold">{selectedBooking.client_name}</span>
-                </p>
-                <p className="text-sm font-medium">
-                  Service: <span className="font-bold">{selectedBooking.services?.name}</span>
-                </p>
-                <p className="text-sm font-medium">
-                  Dates: <span className="font-bold">{formatDates(selectedBooking)}</span>
-                </p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="agent-name">Agent Name</Label>
+            {selectedBooking && (() => {
+              const parsedNotes = parseNotes(selectedBooking.notes);
+              return (
+                <div className="space-y-4">
+                  {/* Booking Summary */}
+                  <div className="space-y-3 p-4 bg-secondary rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-lg">Booking Summary</h4>
+                      <Badge className={getStatusColor(selectedBooking.status)}>
+                        {selectedBooking.status}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Service</p>
+                        <p className="font-medium">{selectedBooking.services?.name || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Date</p>
+                        <p className="font-medium">{format(new Date(selectedBooking.date), "MMM dd, yyyy")}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Time</p>
+                        <p className="font-medium">
+                          {selectedBooking.start_time} - {selectedBooking.end_time}
+                        </p>
+                      </div>
+                      {selectedBooking.city && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">City</p>
+                          <p className="font-medium">{selectedBooking.city}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Client Details */}
+                  <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <h4 className="font-semibold text-base mb-3">Client Information</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Name</p>
+                          <p className="font-medium">{selectedBooking.user_full_name}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          <p className="font-medium">{selectedBooking.user_email}</p>
+                        </div>
+                      </div>
+                      {parsedNotes.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Phone</p>
+                            <p className="font-medium">{parsedNotes.phone}</p>
+                          </div>
+                        </div>
+                      )}
+                      {parsedNotes.address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Address</p>
+                            <p className="font-medium">{parsedNotes.address}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Care Recipient Details */}
+                  {parsedNotes.recipientName && (
+                    <div className="space-y-2 p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
+                      <h4 className="font-semibold text-base mb-3">Care Recipient</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Name</p>
+                            <p className="font-medium">{parsedNotes.recipientName}</p>
+                          </div>
+                        </div>
+                        {parsedNotes.recipientType && (
+                          <div>
+                            <Badge variant="secondary" className="mt-1">
+                              {parsedNotes.recipientType === "Elderly Person" && "Elderly"}
+                              {parsedNotes.recipientType === "Disabled Person" && "Disabled"}
+                              {parsedNotes.recipientType === "Elderly and Disabled" && "Both"}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Info from Notes */}
+                  {parsedNotes.hoursPerDay && (
+                    <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Hours per Day</p>
+                          <p className="font-medium">{parsedNotes.hoursPerDay} hours/day</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full Notes (for any extra info) */}
+                  {selectedBooking.notes && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <h4 className="font-semibold text-sm mb-2">Full Details</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {selectedBooking.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Agent Assignment Input */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label htmlFor="agent-name" className="text-base font-semibold">Assign Agent</Label>
               <Input
                 id="agent-name"
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
                 placeholder="Enter agent's full name"
-                className="h-12"
+                className="h-12 text-base"
               />
+              <p className="text-xs text-muted-foreground">
+                This agent will be assigned to handle this booking
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -276,9 +532,9 @@ const AdminBookings = () => {
             </Button>
             <Button
               onClick={handleConfirmAssignment}
-              disabled={assignAgentMutation.isPending}
+              disabled={assignAgentMutation.isPending || !agentName.trim()}
             >
-              {assignAgentMutation.isPending ? "Assigning..." : "Confirm Assignment"}
+              {assignAgentMutation.isPending ? "Assigning..." : "Confirm & Assign Agent"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -32,36 +32,23 @@ function useUpdateSettings() {
       address?: string;
       facebook_url?: string;
       instagram_url?: string;
-      footer_text?: string;
     }) => {
-      // Utiliser upsert avec un ID fixe ou utiliser le premier enregistrement
-      const { data: existing } = await supabase
+      // Utiliser upsert pour créer ou mettre à jour
+      const { error } = await supabase
         .from("settings")
-        .select("id")
-        .limit(1)
-        .single();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("settings")
-          .update(payload)
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("settings")
-          .insert([payload]);
-        if (error) throw error;
-      }
+        .upsert(payload, {
+          onConflict: "id",
+        });
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-settings"] });
-      qc.invalidateQueries({ queryKey: ["settings"] });
+      qc.invalidateQueries({ queryKey: ["settings"] }); // Invalider aussi la query publique
     },
   });
 }
 
-const AdminSettings = () => {
+const AdminContact = () => {
   const { toast } = useToast();
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -72,9 +59,9 @@ const AdminSettings = () => {
     address: "",
     facebook_url: "",
     instagram_url: "",
-    footer_text: "",
   });
 
+  // Initialiser le formulaire avec les données existantes
   useEffect(() => {
     if (settings) {
       setForm({
@@ -83,7 +70,6 @@ const AdminSettings = () => {
         address: settings.address || "",
         facebook_url: settings.facebook_url || "",
         instagram_url: settings.instagram_url || "",
-        footer_text: settings.footer_text || "",
       });
     }
   }, [settings]);
@@ -93,13 +79,13 @@ const AdminSettings = () => {
     try {
       await updateSettings.mutateAsync(form);
       toast({
-        title: "Settings Updated",
-        description: "Site settings have been saved successfully.",
+        title: "Contact Information Updated",
+        description: "The contact information has been saved successfully.",
       });
     } catch (e: any) {
       toast({
         title: "Error",
-        description: e.message || "Failed to update settings.",
+        description: e.message ?? "Failed to update contact information.",
         variant: "destructive",
       });
     }
@@ -107,8 +93,8 @@ const AdminSettings = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-4xl">
-        <h1 className="text-3xl font-bold">Site Settings</h1>
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Contact Information</h1>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">Loading...</p>
@@ -120,11 +106,12 @@ const AdminSettings = () => {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-3xl font-bold">Site Settings</h1>
+      <h1 className="text-3xl font-bold">Contact Information Management</h1>
+      
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
+            <CardTitle>Contact Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -132,23 +119,28 @@ const AdminSettings = () => {
                 <Label htmlFor="email_admin">Admin Email</Label>
                 <Input
                   id="email_admin"
+                  type="email"
                   value={form.email_admin}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, email_admin: e.target.value }))
                   }
+                  placeholder="contact@careeaseusa.com"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone_admin">Phone</Label>
+                <Label htmlFor="phone_admin">Phone Number</Label>
                 <Input
                   id="phone_admin"
+                  type="tel"
                   value={form.phone_admin}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, phone_admin: e.target.value }))
                   }
+                  placeholder="(212) 555-0100"
                 />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="address">Address</Label>
               <Textarea
@@ -157,40 +149,38 @@ const AdminSettings = () => {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, address: e.target.value }))
                 }
+                placeholder="123 Main Street, New York, NY 10001"
+                rows={3}
               />
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="facebook_url">Facebook URL</Label>
                 <Input
                   id="facebook_url"
+                  type="url"
                   value={form.facebook_url}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, facebook_url: e.target.value }))
                   }
+                  placeholder="https://facebook.com/careeaseusa"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="instagram_url">Instagram URL</Label>
                 <Input
                   id="instagram_url"
+                  type="url"
                   value={form.instagram_url}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, instagram_url: e.target.value }))
                   }
+                  placeholder="https://instagram.com/careeaseusa"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="footer_text">Footer Text</Label>
-              <Textarea
-                id="footer_text"
-                value={form.footer_text}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, footer_text: e.target.value }))
-                }
-              />
-            </div>
+
             <Button type="submit" disabled={updateSettings.isPending}>
               <Save className="h-4 w-4 mr-2" />
               {updateSettings.isPending ? "Saving..." : "Save Changes"}
@@ -202,4 +192,4 @@ const AdminSettings = () => {
   );
 };
 
-export default AdminSettings;
+export default AdminContact;
