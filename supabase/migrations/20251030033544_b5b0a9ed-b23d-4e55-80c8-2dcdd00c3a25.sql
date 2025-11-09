@@ -47,12 +47,7 @@ INSERT INTO public.services (name, description, price_hourly, price_daily, is_ac
 VALUES 
   ('Home Health Aide (HHA)', 'Professional home health aide services for elderly and disabled individuals. Assistance with daily living activities, health monitoring, and compassionate care.', 25.00, 180.00, true),
   ('Housekeeping', 'Specialized housekeeping services adapted to the needs of elderly and disabled individuals. Maintaining a clean, safe, and comfortable living environment.', 20.00, 140.00, true)
-ON CONFLICT (name) DO UPDATE 
-SET 
-  description = EXCLUDED.description,
-  price_hourly = EXCLUDED.price_hourly,
-  price_daily = EXCLUDED.price_daily,
-  is_active = EXCLUDED.is_active;
+ON CONFLICT (name) DO NOTHING;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_bookings_date_range ON public.bookings(date_range_start, date_range_end);

@@ -51,6 +51,7 @@ const Booking = () => {
 
   // Service & Date Selection
   const [selectedService, setSelectedService] = useState(searchParams.get("service") || "");
+  const [recipientType, setRecipientType] = useState(""); // ✅ DÉPLACÉ ICI
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [dateRangeStart, setDateRangeStart] = useState<Date>();
   const [dateRangeEnd, setDateRangeEnd] = useState<Date>();
@@ -63,7 +64,6 @@ const Booking = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [recipientName, setRecipientName] = useState("");
-  const [recipientType, setRecipientType] = useState("");
   const [city, setCity] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,7 +135,6 @@ const Booking = () => {
     }
   };
 
-  // Helper pour générer les dates dans un range
   const getDatesInRange = (start: Date, end: Date): Date[] => {
     const dates: Date[] = [];
     const current = new Date(start);
@@ -157,19 +156,6 @@ const Booking = () => {
     try {
       setIsSubmitting(true);
 
-      // 🔐 Vérifier l'authentification (optionnel - décommentez si nécessaire)
-      // const { data: { user } } = await supabase.auth.getUser();
-      // if (!user) {
-      //   toast({
-      //     title: "Authentication Required",
-      //     description: "Please sign in to make a booking.",
-      //     variant: "destructive",
-      //   });
-      //   setIsSubmitting(false);
-      //   return;
-      // }
-
-      // Vérifier que la ville a été sélectionnée
       if (!city) {
         toast({
           title: "City Required",
@@ -180,14 +166,12 @@ const Booking = () => {
         return;
       }
 
-      // Calculer end_time basé sur start_time + duration
       const startTime = "09:00";
       const hours = parseInt(hoursPerDay || "0", 10);
       const [startHour, startMinute] = startTime.split(':').map(Number);
       const endHour = startHour + hours;
       const endTime = `${endHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
 
-      // Obtenir toutes les dates à réserver
       const datesToBook: Date[] = isRangeMode && dateRangeStart && dateRangeEnd
         ? getDatesInRange(dateRangeStart, dateRangeEnd)
         : selectedDates;
@@ -202,10 +186,8 @@ const Booking = () => {
         return;
       }
 
-      // ✅ CALCULER le prix TOTAL en utilisant datesToBook.length
       const totalPrice = calculateTotalPriceFromDates(datesToBook.length);
 
-      // ✅ NOUVELLE LOGIQUE: Créer UN SEUL booking
       const notesContent = [
         `Client: ${clientName}`,
         `Email: ${email}`,
@@ -223,15 +205,13 @@ const Booking = () => {
         user_full_name: clientName,
         user_email: email,
         service_id: selectedService,
-        // Pour un range ou selected dates
         date: isRangeMode && dateRangeStart ? format(dateRangeStart, "yyyy-MM-dd") : format(datesToBook[0], "yyyy-MM-dd"),
         start_time: startTime,
         end_time: endTime,
         notes: notesContent,
         status: "pending" as const,
         city: city,
-        total_price: totalPrice, // ✅ AJOUTER ce champ
-        // ✅ AJOUTER les champs de range si mode range
+        total_price: totalPrice,
         ...(isRangeMode && dateRangeStart && dateRangeEnd ? {
           date_range_start: format(dateRangeStart, "yyyy-MM-dd"),
           date_range_end: format(dateRangeEnd, "yyyy-MM-dd"),
@@ -253,6 +233,7 @@ const Booking = () => {
       // Reset form
       setStep(1);
       setSelectedService("");
+      setRecipientType(""); // ✅ RESET
       setSelectedDates([]);
       setDateRangeStart(undefined);
       setDateRangeEnd(undefined);
@@ -263,7 +244,6 @@ const Booking = () => {
       setPhone("");
       setAddress("");
       setRecipientName("");
-      setRecipientType("");
       setCity("");
     } catch (error: any) {
       console.error("Error details:", error);
@@ -286,6 +266,15 @@ const Booking = () => {
       });
       return;
     }
+    // ✅ VALIDATION MODIFIÉE : Vérifier recipientType au step 1
+    if (step === 1 && !recipientType) {
+      toast({
+        title: "Recipient Type Required",
+        description: "Please select the type of care recipient to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (step === 2 && selectedDates.length === 0 && (!dateRangeStart || !dateRangeEnd)) {
       toast({
         title: "Dates Required",
@@ -294,7 +283,7 @@ const Booking = () => {
       });
       return;
     }
-    if (step === 3 && (!clientName || !email || !phone || !address || !recipientName || !recipientType || !city)) {
+    if (step === 3 && (!clientName || !email || !phone || !address || !recipientName || !city)) {
       toast({
         title: "Information Required",
         description: "Please fill in all fields to continue, including your city.",
@@ -348,7 +337,7 @@ const Booking = () => {
           <Card className="shadow-2xl border-0">
             <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent pb-8">
               <CardTitle className="text-2xl">
-                {step === 1 && "Select a Service"}
+                {step === 1 && "Select Service & Recipient Type"}
                 {step === 2 && "Choose Dates & Hours"}
                 {step === 3 && "Your Information"}
                 {step === 4 && "Confirm Booking"}
@@ -358,46 +347,76 @@ const Booking = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 p-8">
-              {/* Step 1: Service Selection */}
+              {/* ✅ Step 1: Service Selection + Type of Care Recipient */}
               {step === 1 && (
-                <div className="space-y-4">
-                  <Label className="text-lg font-semibold">Select a Service</Label>
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {[...Array(2)].map((_, i) => (
-                        <div key={i} className="h-24 bg-secondary animate-pulse rounded-lg" />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {services?.map((service) => {
-                        const displayName = getServiceName(service);
-                        const displayHourly = getHourly(service);
-                        return (
-                          <div
-                            key={service.id}
-                            onClick={() => setSelectedService(service.id)}
-                            className={cn(
-                              "border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-xl",
-                              selectedService === service.id
-                                ? "border-primary bg-primary/10 shadow-lg scale-105"
-                                : "border-border hover:border-primary/50"
-                            )}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <h3 className="font-bold text-xl mb-2">{displayName}</h3>
-                                <p className="text-muted-foreground">{service.description}</p>
-                              </div>
-                              <div className="text-right ml-4">
-                                <p className="font-bold text-xl text-primary">${displayHourly}/hr</p>
+                <div className="space-y-6">
+                  {/* Service Selection */}
+                  <div className="space-y-4">
+                    <Label className="text-lg font-semibold">Select a Service</Label>
+                    {isLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(2)].map((_, i) => (
+                          <div key={i} className="h-24 bg-secondary animate-pulse rounded-lg" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {services?.map((service) => {
+                          const displayName = getServiceName(service);
+                          const displayHourly = getHourly(service);
+                          return (
+                            <div
+                              key={service.id}
+                              onClick={() => setSelectedService(service.id)}
+                              className={cn(
+                                "border-2 rounded-xl p-6 cursor-pointer transition-all hover:shadow-xl",
+                                selectedService === service.id
+                                  ? "border-primary bg-primary/10 shadow-lg scale-105"
+                                  : "border-border hover:border-primary/50"
+                              )}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <h3 className="font-bold text-xl mb-2">{displayName}</h3>
+                                  <p className="text-muted-foreground">{service.description}</p>
+                                </div>
+                                {/* ✅ PRIX CACHÉ si recipientType n'est pas sélectionné */}
+                                {recipientType && (
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-xl text-primary">${displayHourly}/hr</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                      {services?.length === 0 && (
-                        <p className="text-muted-foreground">No active services available.</p>
+                          );
+                        })}
+                        {services?.length === 0 && (
+                          <p className="text-muted-foreground">No active services available.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ✅ Type of Care Recipient - DÉPLACÉ ICI */}
+                  {selectedService && (
+                    <div className="space-y-2 pt-4 border-t">
+                      <Label htmlFor="recipient-type" className="text-lg font-semibold">
+                        Type of Care Recipient
+                      </Label>
+                      <Select value={recipientType} onValueChange={setRecipientType}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select type..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="elderly">Elderly Person</SelectItem>
+                          <SelectItem value="disabled">Disabled Person</SelectItem>
+                          <SelectItem value="both">Both Elderly and Disabled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {!recipientType && (
+                        <p className="text-sm text-muted-foreground italic">
+                          Please select the type of care recipient to see pricing
+                        </p>
                       )}
                     </div>
                   )}
@@ -509,7 +528,7 @@ const Booking = () => {
                 </div>
               )}
 
-              {/* Step 3: Client Information */}
+              {/* Step 3: Client Information (recipientType RETIRÉ d'ici) */}
               {step === 3 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
@@ -588,20 +607,19 @@ const Booking = () => {
                           className="h-12"
                         />
                       </div>
+                      {/* ✅ Type déjà sélectionné - affichage seulement */}
                       <div className="space-y-2">
-                        <Label htmlFor="recipient-type" className="text-base font-semibold">
-                          Type of Care Recipient
-                        </Label>
-                        <Select value={recipientType} onValueChange={setRecipientType}>
-                          <SelectTrigger className="h-12">
-                            <SelectValue placeholder="Select type..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="elderly">Elderly Person</SelectItem>
-                            <SelectItem value="disabled">Disabled Person</SelectItem>
-                            <SelectItem value="both">Both Elderly and Disabled</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-base font-semibold">Type of Care Recipient</Label>
+                        <div className="h-12 px-4 py-3 border rounded-md bg-secondary/50 flex items-center">
+                          <span className="font-medium">
+                            {recipientType === "elderly" && "Elderly Person"}
+                            {recipientType === "disabled" && "Disabled Person"}
+                            {recipientType === "both" && "Both Elderly and Disabled"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground italic">
+                          Selected in Step 1. Go back if you need to change this.
+                        </p>
                       </div>
                     </div>
                   </div>
